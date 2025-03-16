@@ -23,6 +23,8 @@ A bash script that searches for trust stores in a Python project, compares them 
 
 - Three operation modes:
   1. **Compare and Log**: Only logs differences without modifying files
+     - Generates an executable script with commands to fix trust stores
+     - Provides both append and replace options in the generated script
   2. **Compare and Append**: Appends missing certificates from the standard trust store
   3. **Compare and Replace**: Replaces project trust stores with the standard trust store
 - Searches for certificate files in a Python project

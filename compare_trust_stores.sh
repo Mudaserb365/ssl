@@ -68,11 +68,22 @@ trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Create a log file
 LOG_FILE="trust_store_comparison_$(date +%Y%m%d_%H%M%S).log"
+COMMANDS_FILE="fix_commands_$(date +%Y%m%d_%H%M%S).sh"
 echo "Logging results to: $LOG_FILE"
+echo "Fix commands will be saved to: $COMMANDS_FILE"
 echo "Trust Store Comparison Report - $(date)" > "$LOG_FILE"
 echo "Standard trust store: $STANDARD_TRUST_STORE" >> "$LOG_FILE"
 echo "Mode: $([ "$MODE" -eq 1 ] && echo "Compare and log" || [ "$MODE" -eq 2 ] && echo "Compare and append" || echo "Compare and replace")" >> "$LOG_FILE"
 echo "----------------------------------------" >> "$LOG_FILE"
+
+# Create commands file header
+echo "#!/bin/bash" > "$COMMANDS_FILE"
+echo "" >> "$COMMANDS_FILE"
+echo "# Commands to fix trust stores - generated on $(date)" >> "$COMMANDS_FILE"
+echo "# Run this script to apply the fixes identified by compare_trust_stores.sh" >> "$COMMANDS_FILE"
+echo "" >> "$COMMANDS_FILE"
+echo "set -e" >> "$COMMANDS_FILE"
+echo "" >> "$COMMANDS_FILE"
 
 # Extract certificates from standard trust store
 echo "Extracting certificates from standard trust store..."
@@ -119,6 +130,32 @@ find "$PROJECT_DIR" -type f -name "*.pem" -o -name "*.crt" -o -name "*.cert" | w
         case "$MODE" in
             1) # Compare and log only
                 echo "  Comparison complete. No changes made to the file."
+                
+                # Add fix commands to the commands file
+                if [ "$MISSING_COUNT" -gt 0 ]; then
+                    echo "" >> "$COMMANDS_FILE"
+                    echo "# Fix for: $file (missing $MISSING_COUNT certificates)" >> "$COMMANDS_FILE"
+                    echo "echo \"Fixing $file...\"" >> "$COMMANDS_FILE"
+                    echo "cp \"$file\" \"$file.bak\"  # Create backup" >> "$COMMANDS_FILE"
+                    
+                    # Option 1: Append using cat
+                    echo "" >> "$COMMANDS_FILE"
+                    echo "# Option 1: Append missing certificates using cat" >> "$COMMANDS_FILE"
+                    echo "cat << 'EOF' >> \"$file\"" >> "$COMMANDS_FILE"
+                    cat "$MISSING_CERTS" >> "$COMMANDS_FILE"
+                    echo "EOF" >> "$COMMANDS_FILE"
+                    
+                    # Option 2: Replace with standard trust store
+                    echo "" >> "$COMMANDS_FILE"
+                    echo "# Option 2: Replace with standard trust store" >> "$COMMANDS_FILE"
+                    echo "# cp \"$STANDARD_TRUST_STORE\" \"$file\"" >> "$COMMANDS_FILE"
+                    
+                    echo "echo \"Updated: $file (backup saved as $file.bak)\"" >> "$COMMANDS_FILE"
+                    echo "" >> "$COMMANDS_FILE"
+                    
+                    echo "  Fix commands added to $COMMANDS_FILE"
+                    echo "  To fix, run: $COMMANDS_FILE or run this script with -m 2"
+                fi
                 ;;
                 
             2) # Compare and append
@@ -146,6 +183,13 @@ find "$PROJECT_DIR" -type f -name "*.pem" -o -name "*.crt" -o -name "*.cert" | w
         echo "----------------------------------------" >> "$LOG_FILE"
     fi
 done
+
+# Make the commands file executable
+if [ "$MODE" -eq 1 ]; then
+    chmod +x "$COMMANDS_FILE"
+    echo "Fix commands have been saved to $COMMANDS_FILE"
+    echo "Run this file to apply the fixes: ./$COMMANDS_FILE"
+fi
 
 echo "Trust store comparison and update completed."
 echo "See $LOG_FILE for details." 
