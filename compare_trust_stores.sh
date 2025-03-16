@@ -11,7 +11,7 @@ usage() {
     echo "  -s  Path to the standard trust store (PEM file)"
     echo "  -d  Directory to search for trust stores (default: current directory)"
     echo "  -e  Comma-separated list of file extensions to search for (default: pem,crt,cert)"
-    echo "  -m  Mode of operation (default: 1)"
+    echo "  -m  Mode of operation (default: 2)"
     echo "      1: Compare and log differences only"
     echo "      2: Compare and append missing certificates"
     echo "      3: Compare and replace with standard trust store"
@@ -25,7 +25,7 @@ PROJECT_DIR="."
 EXTENSIONS="pem,crt,cert"
 STANDARD_TRUST_STORE=""
 TRUST_STORE_URL=""
-MODE=1  # Default mode: compare and log
+MODE=2  # Default mode: compare and append
 
 # Parse command line arguments
 while getopts "s:d:e:m:u:h" opt; do
