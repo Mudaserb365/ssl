@@ -1,79 +1,112 @@
-# Trust Store Comparison and Update Tools
+# Trust Store Management Tools
 
-A set of bash scripts that search for trust stores in a project, compare them with a standard trust store, and update them based on the selected mode of operation.
+A comprehensive collection of scripts for managing trust stores across various environments and application frameworks.
 
-## Scripts
+## Scripts Overview
 
-- **compare_trust_stores.sh**: For PEM, CRT, and CERT trust stores
-- **compare_jks_stores.sh**: For Java KeyStore (JKS) trust stores using keytool
-- **docker_trust_store_update.sh**: For finding and updating trust stores in Docker containers
+| Script | Description |
+|--------|-------------|
+| `app_trust_store_update.sh` | Updates application-specific trust stores for Node.js, Python, Ruby, Go, and .NET applications |
+| `auto_trust_store_manager.sh` | Comprehensive script that automates discovery and modification of trust stores in various runtimes |
+| `kubernetes-trust-store.yaml` | Kubernetes manifests for cluster-wide trust store management |
 
-## Usage
+## Automated Trust Store Manager
 
-### For PEM/CRT/CERT Trust Stores
+The `auto_trust_store_manager.sh` script is the most comprehensive tool in this collection. It can:
+
+- Discover trust stores in various formats (JKS, PKCS12, PEM)
+- Determine if trust stores can be accessed without a password
+- Try common default passwords
+- Append certificates to trust stores
+- Work with Docker containers and Kubernetes resources
+- Log all operations and provide a summary
+
+### Usage
 
 ```bash
-./compare_trust_stores.sh -s <standard_trust_store> [-d <project_directory>] [-e <extensions>] [-m <mode>] [-u <url>]
+./auto_trust_store_manager.sh [options]
+
+Options:
+  -d, --directory DIR       Target directory to scan (default: current directory)
+  -c, --certificate FILE    Path to certificate to append (default: auto-generated)
+  -l, --log FILE            Log file path (default: trust_store_scan_YYYYMMDD_HHMMSS.log)
+  -p, --passwords "p1 p2"   Space-separated list of passwords to try (in quotes)
+  -k, --kubernetes          Enable Kubernetes mode (scan ConfigMaps and Secrets)
+  -D, --docker              Enable Docker mode (scan common Docker trust store locations)
+  -r, --restart             Restart affected services after modification
+  -n, --no-backup           Disable backup creation before modification
+  -v, --verbose             Enable verbose output
+  -h, --help                Display this help message
 ```
 
-### For JKS Trust Stores
+### Examples
 
 ```bash
-./compare_jks_stores.sh -s <standard_trust_store> [-p <password>] [-d <project_directory>] [-m <mode>] [-u <url>]
+# Scan current directory for trust stores
+./auto_trust_store_manager.sh
+
+# Scan a specific directory with a custom certificate
+./auto_trust_store_manager.sh -d /path/to/project -c /path/to/cert.pem
+
+# Scan Kubernetes resources and restart affected services
+./auto_trust_store_manager.sh --kubernetes --restart
+
+# Scan Docker containers with verbose output
+./auto_trust_store_manager.sh --docker -v
+
+# Try specific passwords
+./auto_trust_store_manager.sh -p "changeit password secret"
 ```
 
-### For Docker Containers
+## Application Trust Store Update
+
+The `app_trust_store_update.sh` script focuses specifically on updating trust stores for various application frameworks:
+
+- Node.js: Updates `NODE_EXTRA_CA_CERTS` environment variable
+- Python/Ruby/Go: Updates `SSL_CERT_FILE` environment variable
+- .NET: Updates application configuration files
+
+### Usage
 
 ```bash
-./docker_trust_store_update.sh -s <standard_trust_store> -c <container_id> [-p <path_in_container>] [-m <mode>] [-u <url>]
+./app_trust_store_update.sh [options]
+
+Options:
+  -s <path>    Path to standard trust store (default: /etc/ssl/certs/ca-certificates.crt)
+  -d <path>    Application directory to scan (default: current directory)
+  -m <mode>    Mode: 1=check, 2=update (default: 2)
+  -u <url>     URL to download standard trust store
+  -h           Display this help message
 ```
 
-## Parameters
+## Kubernetes Trust Store Management
 
-### Common Parameters
+The `kubernetes-trust-store.yaml` file provides Kubernetes manifests for:
 
-- `-s`: Path to your standard trust store - required if `-u` is not used
-- `-u`: URL to download standard trust store - required if `-s` is not used
-- `-m`: Mode of operation
-  - `1`: Compare and log differences only
-  - `2`: Compare and append missing certificates
-  - `3`: Compare and replace with standard trust store
-- `-h`: Display help message
+- ConfigMap with CA certificates
+- Init container script for trust store initialization
+- Example deployment with proper trust store configuration
+- CronJob for periodic trust store updates
 
-### PEM/CRT/CERT Specific Parameters
+### Usage
 
-- `-d`: Directory to search for trust stores (default: current directory)
-- `-e`: Comma-separated list of file extensions to search for (default: pem,crt,cert)
-- Default mode: `2` (Compare and append)
+```bash
+# Apply the Kubernetes manifests
+kubectl apply -f kubernetes-trust-store.yaml
+```
 
-### JKS Specific Parameters
+## Documentation
 
-- `-d`: Directory to search for trust stores (default: current directory)
-- `-p`: Password for the JKS trust stores (default: changeit)
-- Default mode: `2` (Compare and append)
+For a comprehensive guide on trust store management, including all possible permutations and use cases, see the [Trust Store Management Documentation](trust-store-management.md).
 
-### Docker Specific Parameters
+## Requirements
 
-- `-c`: Docker container ID or name - required
-- `-p`: Path in container to search for trust stores (default: /)
-- Default mode: `2` (Compare and append)
+- Bash 4.0+
+- OpenSSL
+- Java keytool (for JKS trust stores)
+- Docker (for Docker mode)
+- kubectl (for Kubernetes mode)
 
-## Features
+## License
 
-- Three operation modes:
-  1. **Compare and Log**: Only logs differences without modifying files
-     - Generates an executable script with commands to fix trust stores
-     - Provides both append and replace options in the generated script
-  2. **Compare and Append**: Appends missing certificates from the standard trust store
-  3. **Compare and Replace**: Replaces project trust stores with the standard trust store
-- Flexible trust store source options:
-  - Local file path
-  - Remote URL (downloaded via HTTP GET)
-- Searches for certificate files in:
-  - Local filesystem
-  - Java KeyStores
-  - Docker containers
-- Compares certificates with a standard trust store
-- Creates detailed log files with comparison results
-- Creates backups of all modified files with a `.bak` extension
-- Handles multiple certificate formats (PEM, CRT, CERT, JKS) 
+MIT 
