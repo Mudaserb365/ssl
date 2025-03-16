@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+  # Example web application with trust store management
+  webapp:
+    image: your-webapp-image:latest
+    container_name: webapp
+    environment:
+      - INSTALL_DEPS=true
+      - TRUST_STORE_URL=https://your-central-location.com/trust-stores/standard-trust-store.pem
+      - JKS_TRUST_STORE_URL=https://your-central-location.com/trust-stores/standard-trust-store.jks
+      - JKS_PASSWORD=changeit
+    volumes:
+      - ./docker_trust_store_init.sh:/docker_trust_store_init.sh
+    entrypoint: ["/bin/bash", "/docker_trust_store_init.sh"]
+    command: ["your-original-entrypoint", "and", "arguments"]
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+  # Example Java application with trust store management
+  java-app:
+    image: your-java-app-image:latest
+    container_name: java-app
+    environment:
+      - INSTALL_DEPS=true
+      - TRUST_STORE_URL=https://your-central-location.com/trust-stores/standard-trust-store.pem
+      - JKS_TRUST_STORE_URL=https://your-central-location.com/trust-stores/standard-trust-store.jks
+      - JKS_PASSWORD=changeit
+      # Java-specific trust store settings
+      - JAVA_OPTS=-Djavax.net.ssl.trustStore=/opt/trust-store-manager/standard-trust-store.jks -Djavax.net.ssl.trustStorePassword=changeit
+    volumes:
+      - ./docker_trust_store_init.sh:/docker_trust_store_init.sh
+    entrypoint: ["/bin/bash", "/docker_trust_store_init.sh"]
+    command: ["java", "-jar", "/app/your-application.jar"]
+    ports:
+      - "8081:8080"
+    networks:
+      - app-network
+
+  # Example of using a multi-stage build with trust store management
+  # This would be defined in your Dockerfile:
+  #
+  # FROM your-base-image AS builder
+  # ... (build steps)
+  #
+  # FROM your-base-image
+  # COPY --from=builder /app/build /app
+  # COPY docker_trust_store_init.sh /docker_trust_store_init.sh
+  # RUN chmod +x /docker_trust_store_init.sh
+  # RUN INSTALL_DEPS=true /docker_trust_store_init.sh
+  # ... (rest of your Dockerfile)
+  #
+  multi-stage-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multi-stage-app
+    ports:
+      - "8082:8080"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 
