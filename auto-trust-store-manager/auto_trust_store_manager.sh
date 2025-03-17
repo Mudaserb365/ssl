@@ -177,12 +177,24 @@ parse_args() {
 check_dependencies() {
     local missing_deps=false
     
-    for cmd in openssl keytool find grep sed awk; do
+    # Check for basic dependencies
+    for cmd in openssl find grep sed awk; do
         if ! command -v "$cmd" &> /dev/null; then
             log_error "Required command not found: $cmd"
             missing_deps=true
         fi
     done
+    
+    # Check for keytool specifically
+    KEYTOOL_PATH=$(find_keytool)
+    if [ -z "$KEYTOOL_PATH" ]; then
+        missing_deps=true
+    else
+        # Export the keytool path for use in other functions
+        export KEYTOOL_PATH
+        # Create an alias to ensure we use the found keytool
+        alias keytool="$KEYTOOL_PATH"
+    fi
     
     if [ "$missing_deps" = true ]; then
         log_error "Please install missing dependencies and try again."
@@ -847,35 +859,31 @@ compare_trust_stores() {
                 # Handle different store types differently
                 case "$file_type" in
                     "JKS")
-                        # For JKS, we need to use keytool to import
+                        # For JKS, we use keytool to import
                         cp "$baseline_cert" "$temp_cert"
-                        if keytool -importcert -noprompt -keystore "$file" -storepass "$STORE_PASSWORD" \
-                            -alias "${alias_prefix}-${alias_counter}" -file "$temp_cert" &>/dev/null; then
-                            log_success "Successfully imported certificate to JKS with alias ${alias_prefix}-${alias_counter}"
-                        else
-                            log_error "Failed to import certificate to JKS"
-                        fi
-                        ((alias_counter++))
+                        keytool -importcert -noprompt -keystore "$file" \
+                            -storepass "$STORE_PASSWORD" \
+                            -alias "${alias_prefix}-${alias_counter}" \
+                            -file "$temp_cert"
                         ;;
                     "PKCS12")
-                        # For PKCS12, we need to convert and merge
+                        # For PKCS12, we convert and merge
                         cp "$baseline_cert" "$temp_cert"
                         local temp_pkcs12="/tmp/temp_pkcs12_$(date +%s).p12"
-                        if openssl pkcs12 -export -in "$temp_cert" -nokeys \
-                            -passout "pass:$STORE_PASSWORD" -out "$temp_pkcs12" &>/dev/null; then
-                            if openssl pkcs12 -in "$file" -nokeys -passin "pass:$STORE_PASSWORD" \
-                                -passout "pass:$STORE_PASSWORD" -out "$file.tmp" &>/dev/null; then
-                                cat "$temp_pkcs12" >> "$file.tmp"
-                                mv "$file.tmp" "$file"
-                                log_success "Successfully added certificate to PKCS12"
-                            fi
+                        openssl pkcs12 -export -in "$temp_cert" -nokeys \
+                            -passout "pass:$STORE_PASSWORD" \
+                            -out "$temp_pkcs12"
+                        if openssl pkcs12 -in "$file" -nokeys -passin "pass:$STORE_PASSWORD" \
+                            -passout "pass:$STORE_PASSWORD" -out "$file.tmp" &>/dev/null; then
+                            cat "$temp_pkcs12" >> "$file.tmp"
+                            mv "$file.tmp" "$file"
+                            log_success "Successfully added certificate to PKCS12"
                         fi
                         rm -f "$temp_pkcs12"
                         ;;
                     "PEM")
-                        # For PEM, we can simply append
+                        # For PEM, simple append
                         cat "$baseline_cert" >> "$file"
-                        log_success "Successfully appended certificate to PEM"
                         ;;
                 esac
             fi
@@ -894,4 +902,67 @@ compare_trust_stores() {
         log_warning "Trust store $file is missing $missing_certs certificates"
         return 1
     fi
+}
+
+# Find keytool from JRE installations
+find_keytool() {
+    local keytool_path=""
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    local local_keytool="$script_dir/keytool"
+    
+    # First check for local copy
+    if [ -x "$local_keytool" ]; then
+        log_success "Found local keytool: $local_keytool"
+        echo "$local_keytool"
+        return 0
+    fi
+    
+    # Then check if keytool is in PATH
+    if command -v keytool &> /dev/null; then
+        keytool_path=$(command -v keytool)
+        log_success "Found keytool in PATH: $keytool_path"
+        echo "$keytool_path"
+        return 0
+    fi
+    
+    # Common JRE/JDK installation directories
+    local java_dirs=(
+        "/usr/lib/jvm"              # Linux default
+        "/usr/java"                 # Alternative Linux
+        "/usr/local/java"           # Local installations
+        "/Library/Java/JavaVirtualMachines"  # macOS
+        "/System/Library/Java/JavaVirtualMachines"  # macOS System
+        "/opt/java"                 # Optional installations
+        "/opt/jdk"
+        "/opt/openjdk"
+        "$HOME/.sdkman/candidates/java"  # SDKMAN installations
+        "/c/Program Files/Java"     # Windows (through WSL)
+        "/c/Program Files (x86)/Java"
+    )
+    
+    # Search in common Java directories
+    for base_dir in "${java_dirs[@]}"; do
+        if [ -d "$base_dir" ]; then
+            log_debug "Searching in $base_dir"
+            # Find all keytool executables
+            while IFS= read -r path; do
+                if [ -x "$path" ]; then
+                    log_success "Found keytool: $path"
+                    echo "$path"
+                    return 0
+                fi
+            done < <(find "$base_dir" -type f -name "keytool" 2>/dev/null)
+        fi
+    done
+    
+    # If no keytool found, try to help user install Java
+    log_error "Could not find keytool utility"
+    log_info "Please install Java Runtime Environment (JRE) or Java Development Kit (JDK)"
+    log_info "You can install Java using one of these methods:"
+    log_info "- macOS: brew install openjdk"
+    log_info "- Ubuntu/Debian: sudo apt-get install default-jre"
+    log_info "- CentOS/RHEL: sudo yum install java-11-openjdk"
+    log_info "- Manual download: https://adoptium.net/temurin/releases/"
+    
+    return 1
 } 
