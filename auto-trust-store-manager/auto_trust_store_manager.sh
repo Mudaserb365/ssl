@@ -907,23 +907,6 @@ compare_trust_stores() {
 # Find keytool from JRE installations
 find_keytool() {
     local keytool_path=""
-    local script_dir="$(dirname "$(readlink -f "$0")")"
-    local local_keytool="$script_dir/keytool"
-    
-    # First check for local copy
-    if [ -x "$local_keytool" ]; then
-        log_success "Found local keytool: $local_keytool"
-        echo "$local_keytool"
-        return 0
-    fi
-    
-    # Then check if keytool is in PATH
-    if command -v keytool &> /dev/null; then
-        keytool_path=$(command -v keytool)
-        log_success "Found keytool in PATH: $keytool_path"
-        echo "$keytool_path"
-        return 0
-    fi
     
     # Common JRE/JDK installation directories
     local java_dirs=(
@@ -939,6 +922,16 @@ find_keytool() {
         "/c/Program Files/Java"     # Windows (through WSL)
         "/c/Program Files (x86)/Java"
     )
+    
+    log_info "Searching for keytool utility..."
+    
+    # First check if keytool is already in PATH
+    if command -v keytool &> /dev/null; then
+        keytool_path=$(command -v keytool)
+        log_success "Found keytool in PATH: $keytool_path"
+        echo "$keytool_path"
+        return 0
+    fi
     
     # Search in common Java directories
     for base_dir in "${java_dirs[@]}"; do
