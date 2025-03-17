@@ -186,6 +186,49 @@ check_dependencies() {
     done
     
     # Check for keytool specifically
+find_keytool() {
+    local keytool_path=""
+    
+    # Common JRE/JDK installation directories
+    local java_dirs=(
+        "/usr/lib/jvm"              # Linux default
+        "/usr/java"                 # Alternative Linux
+        "/usr/local/java"           # Local installations
+        "/Library/Java/JavaVirtualMachines"  # macOS
+        "/System/Library/Java/JavaVirtualMachines"  # macOS System
+        "/opt/java"                 # Optional installations
+        "/opt/jdk"
+        "/opt/openjdk"
+        "$HOME/.sdkman/candidates/java"  # SDKMAN installations
+        "/c/Program Files/Java"     # Windows (through WSL)
+        "/c/Program Files (x86)/Java"
+    )
+    
+    log_info "Searching for keytool utility..."
+    
+    # First check if keytool is already in PATH
+    if command -v keytool &> /dev/null; then
+        keytool_path=$(command -v keytool)
+        log_success "Found keytool in PATH: $keytool_path"
+        echo "$keytool_path"
+        return 0
+    fi
+    
+    # Search in common Java directories
+    for base_dir in "${java_dirs[@]}"; do
+        if [ -d "$base_dir" ]; then
+            log_debug "Searching in $base_dir"
+            # Find all keytool executables
+            while IFS= read -r path; do
+                if [ -x "$path" ]; then
+                    log_success "Found keytool: $path"
+                    echo "$path"
+                    return 0
+                fi
+            done < <(find "$base_dir" -type f -name "keytool" 2>/dev/null)
+        fi
+    done
+    
     KEYTOOL_PATH=$(find_keytool)
     if [ -z "$KEYTOOL_PATH" ]; then
         missing_deps=true
@@ -450,7 +493,7 @@ extract_config_paths() {
         
         # Extract paths from Nginx/Apache config files
         grep -o "ssl_trusted_certificate.*;" "$file" 2>/dev/null | while read -r line; do
-            if [[ "$line" =~ ssl_trusted_certificate[[:space:]]+(.+); ]]; then
+            if [[ "$line" =~ ssl_trusted_certificate[[:space:]]+(.+)\; ]]; then
                 path=$(echo "${BASH_REMATCH[1]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -d "'\"")
                 # Handle relative paths
                 if [[ ! "$path" = /* ]]; then
@@ -905,49 +948,6 @@ compare_trust_stores() {
 }
 
 # Find keytool from JRE installations
-find_keytool() {
-    local keytool_path=""
-    
-    # Common JRE/JDK installation directories
-    local java_dirs=(
-        "/usr/lib/jvm"              # Linux default
-        "/usr/java"                 # Alternative Linux
-        "/usr/local/java"           # Local installations
-        "/Library/Java/JavaVirtualMachines"  # macOS
-        "/System/Library/Java/JavaVirtualMachines"  # macOS System
-        "/opt/java"                 # Optional installations
-        "/opt/jdk"
-        "/opt/openjdk"
-        "$HOME/.sdkman/candidates/java"  # SDKMAN installations
-        "/c/Program Files/Java"     # Windows (through WSL)
-        "/c/Program Files (x86)/Java"
-    )
-    
-    log_info "Searching for keytool utility..."
-    
-    # First check if keytool is already in PATH
-    if command -v keytool &> /dev/null; then
-        keytool_path=$(command -v keytool)
-        log_success "Found keytool in PATH: $keytool_path"
-        echo "$keytool_path"
-        return 0
-    fi
-    
-    # Search in common Java directories
-    for base_dir in "${java_dirs[@]}"; do
-        if [ -d "$base_dir" ]; then
-            log_debug "Searching in $base_dir"
-            # Find all keytool executables
-            while IFS= read -r path; do
-                if [ -x "$path" ]; then
-                    log_success "Found keytool: $path"
-                    echo "$path"
-                    return 0
-                fi
-            done < <(find "$base_dir" -type f -name "keytool" 2>/dev/null)
-        fi
-    done
-    
     # If no keytool found, try to help user install Java
     log_error "Could not find keytool utility"
     log_info "Please install Java Runtime Environment (JRE) or Java Development Kit (JDK)"

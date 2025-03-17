@@ -1,132 +1,128 @@
-# Automated Trust Store Manager
+# Auto Trust Store Manager
 
-A comprehensive script that automates the discovery and modification of trust store files in various runtimes, containers, and web servers.
+This project demonstrates automatic management of trust stores for Java (JKS) and Python (PEM) applications.
 
-## Features
+## Project Overview
 
-- **Automatic Discovery**: Finds trust stores in various formats (JKS, PKCS12, PEM)
-- **Password Handling**: Tries common default passwords for accessing protected trust stores
-- **Multiple Environments**:
-  - Local filesystem
-  - Docker containers
-  - Kubernetes resources (ConfigMaps and Secrets)
-- **Configuration Parsing**: Extracts trust store paths from various configuration files
-- **Backup Creation**: Creates backups before modifying trust stores
-- **Detailed Logging**: Provides comprehensive logs of all operations
-- **Service Restart**: Optionally restarts affected services after modification
+The Auto Trust Store Manager provides scripts and applications to automatically update trust stores for both Java and Python applications. It ensures that all certificates in a baseline trust chain are included in the standard trust stores used by the applications.
 
-## Supported Trust Store Types
+## Components
 
-- Java KeyStore (JKS) files (`.jks`, `.keystore`, `.truststore`)
-- PKCS#12 files (`.p12`, `.pfx`)
-- PEM certificate bundles (`.pem`, `.crt`, `.cer`, `.cert`)
+- **Common Certificates**: Shared certificate files used by both Java and Python applications
+- **Java Application**: A Spring Boot application that uses a JKS trust store
+- **Python Application**: A Flask application that uses a PEM trust store
+- **Trust Store Manager Scripts**: Shell scripts to update the trust stores
+- **Test Cases**: Unit tests for both Java and Python implementations
 
-## Supported Environments
+## Directory Structure
 
-- JVM-based runtimes: Java, Spring Boot, Tomcat, JBoss/WildFly, WebLogic, WebSphere
-- Containers: Docker, Kubernetes
-- Web Servers: Nginx, Apache HTTPD
-- Other runtimes: Node.js, Python, Go applications
-
-## Usage
-
-```bash
-./auto_trust_store_manager.sh [options]
-
-Options:
-  -d, --directory DIR       Target directory to scan (default: current directory)
-  -c, --certificate FILE    Path to certificate to append (default: auto-generated)
-  -l, --log FILE            Log file path (default: trust_store_scan_YYYYMMDD_HHMMSS.log)
-  -p, --passwords "p1 p2"   Space-separated list of passwords to try (in quotes)
-  -k, --kubernetes          Enable Kubernetes mode (scan ConfigMaps and Secrets)
-  -D, --docker              Enable Docker mode (scan common Docker trust store locations)
-  -r, --restart             Restart affected services after modification
-  -n, --no-backup           Disable backup creation before modification
-  -v, --verbose             Enable verbose output
-  -h, --help                Display this help message
+```
+auto-trust-store-manager/
+├── common-certs/
+│   ├── baseline-trust-chain.pem    # Contains trusted certificates that should always be included
+│   ├── standard-trust-chain.pem    # PEM trust store for Python applications
+│   └── standard-trust-store.jks    # JKS trust store for Java applications
+├── java-app/
+│   ├── auto-trust-store-manager.sh # Script to update the Java trust store
+│   ├── TrustStoreTest.java         # Test case for the Java trust store
+│   ├── pom.xml                     # Maven project file
+│   └── src/                        # Java application source code
+├── python-app/
+│   ├── auto-trust-store-manager.sh # Script to update the Python trust store
+│   ├── app.py                      # Flask application
+│   ├── requirements.txt            # Python dependencies
+│   └── test_trust_store.py         # Test case for the Python trust store
+└── README.md                       # This file
 ```
 
-## Examples
+## Certificate Files
 
-### Basic Usage
+- **baseline-trust-chain.pem**: Contains trusted certificates that should always be included in both trust stores
+- **standard-trust-chain.pem**: The PEM trust store used by Python applications
+- **standard-trust-store.jks**: The JKS trust store used by Java applications
+
+## Auto Trust Store Manager Scripts
+
+### Python
+
+The Python auto trust store manager script (`python-app/auto-trust-store-manager.sh`) performs the following steps:
+
+1. Checks if the standard PEM file exists, creating it if necessary
+2. Copies the baseline trust chain to the standard trust chain
+3. Counts and reports the number of certificates in the trust store
+
+### Java
+
+The Java auto trust store manager script (`java-app/auto-trust-store-manager.sh`) performs the following steps:
+
+1. Checks if the standard JKS file exists, creating it if necessary
+2. Extracts certificates from the baseline PEM file
+3. Imports each certificate into the JKS trust store
+4. Counts and reports the number of certificates in the trust store
+
+## Test Cases
+
+### Python
+
+The Python test case (`python-app/test_trust_store.py`) verifies:
+
+1. The standard trust store exists and contains certificates
+2. The baseline trust store exists and contains certificates
+3. All certificates in the baseline trust store are present in the standard trust store
+4. The auto trust store manager script works correctly
+
+### Java
+
+The Java test case (`java-app/TrustStoreTest.java`) verifies:
+
+1. The standard trust store exists and contains certificates
+2. The auto trust store manager script works correctly
+
+## Running the Applications
+
+### Python
 
 ```bash
-# Scan current directory for trust stores
-./auto_trust_store_manager.sh
-
-# Scan a specific directory with a custom certificate
-./auto_trust_store_manager.sh -d /path/to/project -c /path/to/cert.pem
-
-# Enable verbose output
-./auto_trust_store_manager.sh -v
+cd python-app
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python app.py
 ```
 
-### Docker Mode
+The Python application will be available at http://localhost:5000
+
+### Java
 
 ```bash
-# Scan Docker containers for trust stores
-./auto_trust_store_manager.sh --docker
-
-# Scan Docker containers and restart them after modification
-./auto_trust_store_manager.sh --docker --restart
+cd java-app
+mvn spring-boot:run
 ```
 
-### Kubernetes Mode
+The Java application will be available at http://localhost:8080
+
+## Running the Tests
+
+### Python
 
 ```bash
-# Scan Kubernetes resources for trust stores
-./auto_trust_store_manager.sh --kubernetes
-
-# Scan Kubernetes resources with custom passwords
-./auto_trust_store_manager.sh --kubernetes -p "changeit password secret"
+cd python-app
+python -m unittest test_trust_store.py
 ```
 
-## How It Works
+### Java
 
-1. **Discovery Phase**:
-   - Searches for trust store files by extension
-   - Extracts trust store paths from configuration files
-   - In Docker mode, scans common trust store locations in containers
-   - In Kubernetes mode, scans ConfigMaps and Secrets
+```bash
+cd java-app
+javac TrustStoreTest.java
+java TrustStoreTest
+```
 
-2. **Access Phase**:
-   - Determines the type of each trust store
-   - For protected stores, tries common passwords
-   - Creates backups before modification
+## Maintenance
 
-3. **Modification Phase**:
-   - Appends the specified certificate to each trust store
-   - Verifies the modification was successful
-   - Logs the results
+To add new certificates to the trust stores:
 
-4. **Cleanup Phase**:
-   - Restarts services if requested
-   - Prints a summary of operations
-
-## Requirements
-
-- Bash 4.0+
-- OpenSSL
-- Java keytool (for JKS trust stores)
-- Docker (for Docker mode)
-- kubectl and jq (for Kubernetes mode)
-
-## Troubleshooting
-
-### Common Issues
-
-- **Missing Dependencies**: Ensure all required tools are installed
-- **Permission Issues**: The script may need elevated privileges to access certain trust stores
-- **Password Issues**: If your trust stores use non-standard passwords, specify them with the `-p` option
-
-### Log File
-
-The script creates a detailed log file that includes:
-- All discovered trust stores
-- Access attempts and results
-- Modification status
-- Commands to remove test certificates if needed
-
-## License
-
-MIT 
+1. Add the certificate to the `common-certs/baseline-trust-chain.pem` file
+2. Run the appropriate auto trust store manager script:
+   - For Python: `./python-app/auto-trust-store-manager.sh`
+   - For Java: `./java-app/auto-trust-store-manager.sh` 
