@@ -27,6 +27,9 @@ SUMMARY_SUCCESS=0
 SUMMARY_FAILURE=0
 KUBERNETES_MODE=false
 DOCKER_MODE=false
+BASELINE_URL=""
+BASELINE_STORE="/tmp/baseline_trust_store_$(date +%s)"
+COMPARE_MODE=false
 
 # Create a test certificate if none provided
 create_test_certificate() {
@@ -76,12 +79,15 @@ Options:
   -r, --restart             Restart affected services after modification
   -n, --no-backup           Disable backup creation before modification
   -v, --verbose             Enable verbose output
+  -b, --baseline URL        URL to download baseline trust store for comparison
+  -C, --compare-only        Only compare trust stores, don't modify them
   -h, --help                Display this help message
 
 Examples:
   $0 -d /path/to/project -c /path/to/cert.pem
   $0 --kubernetes --restart
   $0 --docker -v
+  $0 -b https://example.com/baseline.pem -C
 EOF
     exit 1
 }
@@ -126,6 +132,14 @@ parse_args() {
                 VERBOSE=true
                 shift
                 ;;
+            -b|--baseline)
+                BASELINE_URL="$2"
+                shift 2
+                ;;
+            -C|--compare-only)
+                COMPARE_MODE=true
+                shift
+                ;;
             -h|--help)
                 usage
                 ;;
@@ -149,6 +163,13 @@ parse_args() {
     elif [ ! -f "$TEST_CERT_PATH" ]; then
         log_error "Certificate file does not exist: $TEST_CERT_PATH"
         exit 1
+    fi
+
+    # Additional validation for baseline URL
+    if [ -n "$BASELINE_URL" ]; then
+        if ! download_baseline_store; then
+            exit 1
+        fi
     fi
 }
 
@@ -602,6 +623,15 @@ process_trust_store() {
     
     log_info "Processing trust store: $file (Type: $file_type)"
     
+    # If baseline store is provided, compare first
+    if [ -n "$BASELINE_URL" ]; then
+        compare_trust_stores "$file"
+        if [ "$COMPARE_MODE" = true ]; then
+            return $?
+        fi
+    fi
+    
+    # Continue with existing processing if not in compare-only mode
     case "$file_type" in
         "JKS")
             handle_jks "$file"
@@ -686,4 +716,142 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"
+
+# Add new functions after the check_dependencies function
+
+# Download baseline trust store
+download_baseline_store() {
+    log_info "Downloading baseline trust store from $BASELINE_URL"
+    
+    # Check if wget or curl is available
+    if command -v wget &> /dev/null; then
+        if wget -q "$BASELINE_URL" -O "$BASELINE_STORE"; then
+            log_success "Successfully downloaded baseline trust store using wget"
+            return 0
+        fi
+    elif command -v curl &> /dev/null; then
+        if curl -s "$BASELINE_URL" -o "$BASELINE_STORE"; then
+            log_success "Successfully downloaded baseline trust store using curl"
+            return 0
+        fi
+    else
+        log_error "Neither wget nor curl is available"
+        return 1
+    fi
+    
+    log_error "Failed to download baseline trust store"
+    return 1
+}
+
+# Compare trust stores
+compare_trust_stores() {
+    local file="$1"
+    local file_type=$(detect_file_type "$file")
+    local temp_baseline="/tmp/baseline_$(date +%s).pem"
+    local temp_target="/tmp/target_$(date +%s).pem"
+    local missing_certs=0
+    
+    log_info "Comparing trust store: $file with baseline"
+    
+    # Convert baseline to PEM format if needed
+    case $(detect_file_type "$BASELINE_STORE") in
+        "JKS")
+            for password in "${COMMON_PASSWORDS[@]}"; do
+                if keytool -exportcert -keystore "$BASELINE_STORE" -storepass "$password" -rfc > "$temp_baseline" 2>/dev/null; then
+                    break
+                fi
+            done
+            ;;
+        "PKCS12")
+            for password in "${COMMON_PASSWORDS[@]}"; do
+                if openssl pkcs12 -in "$BASELINE_STORE" -nokeys -passin "pass:$password" -out "$temp_baseline" 2>/dev/null; then
+                    break
+                fi
+            done
+            ;;
+        "PEM")
+            cp "$BASELINE_STORE" "$temp_baseline"
+            ;;
+        *)
+            log_error "Unknown baseline trust store format"
+            return 1
+            ;;
+    esac
+    
+    # Convert target to PEM format
+    case "$file_type" in
+        "JKS")
+            for password in "${COMMON_PASSWORDS[@]}"; do
+                if keytool -exportcert -keystore "$file" -storepass "$password" -rfc > "$temp_target" 2>/dev/null; then
+                    break
+                fi
+            done
+            ;;
+        "PKCS12")
+            for password in "${COMMON_PASSWORDS[@]}"; do
+                if openssl pkcs12 -in "$file" -nokeys -passin "pass:$password" -out "$temp_target" 2>/dev/null; then
+                    break
+                fi
+            done
+            ;;
+        "PEM")
+            cp "$file" "$temp_target"
+            ;;
+        *)
+            log_error "Unknown target trust store format"
+            return 1
+            ;;
+    esac
+    
+    # Extract individual certificates from both files
+    local baseline_dir=$(mktemp -d)
+    local target_dir=$(mktemp -d)
+    
+    # Split baseline certificates
+    csplit -z -f "$baseline_dir/cert-" "$temp_baseline" '/-----BEGIN CERTIFICATE-----/' '{*}' 2>/dev/null
+    
+    # Split target certificates
+    csplit -z -f "$target_dir/cert-" "$temp_target" '/-----BEGIN CERTIFICATE-----/' '{*}' 2>/dev/null
+    
+    # Compare certificates
+    local total_baseline=$(find "$baseline_dir" -type f | wc -l)
+    local total_target=$(find "$target_dir" -type f | wc -l)
+    
+    log_info "Baseline contains $total_baseline certificates"
+    log_info "Target contains $total_target certificates"
+    
+    # Check for missing certificates
+    for baseline_cert in "$baseline_dir"/cert-*; do
+        local found=false
+        for target_cert in "$target_dir"/cert-*; do
+            if openssl x509 -fingerprint -noout -in "$baseline_cert" 2>/dev/null | \
+               cmp -s - <(openssl x509 -fingerprint -noout -in "$target_cert" 2>/dev/null); then
+                found=true
+                break
+            fi
+        done
+        if [ "$found" = false ]; then
+            ((missing_certs++))
+            local subject=$(openssl x509 -noout -subject -in "$baseline_cert" 2>/dev/null)
+            log_warning "Missing certificate: $subject"
+            
+            if [ "$COMPARE_MODE" = false ]; then
+                log_info "Appending missing certificate to $file"
+                cat "$baseline_cert" >> "$file"
+            fi
+        fi
+    done
+    
+    # Clean up
+    rm -f "$temp_baseline" "$temp_target"
+    rm -rf "$baseline_dir" "$target_dir"
+    
+    if [ $missing_certs -eq 0 ]; then
+        log_success "Trust store $file contains all baseline certificates"
+        return 0
+    else
+        log_warning "Trust store $file is missing $missing_certs certificates"
+        return 1
+    fi
+} 
