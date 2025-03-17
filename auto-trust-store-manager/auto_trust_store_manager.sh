@@ -751,6 +751,9 @@ compare_trust_stores() {
     local temp_baseline="/tmp/baseline_$(date +%s).pem"
     local temp_target="/tmp/target_$(date +%s).pem"
     local missing_certs=0
+    local temp_cert="/tmp/missing_cert_$(date +%s).pem"
+    local alias_prefix="added-cert-$(date +%s)"
+    local alias_counter=0
     
     log_info "Comparing trust store: $file with baseline"
     
@@ -779,11 +782,12 @@ compare_trust_stores() {
             ;;
     esac
     
-    # Convert target to PEM format
+    # Convert target to PEM format for comparison
     case "$file_type" in
         "JKS")
             for password in "${COMMON_PASSWORDS[@]}"; do
                 if keytool -exportcert -keystore "$file" -storepass "$password" -rfc > "$temp_target" 2>/dev/null; then
+                    export STORE_PASSWORD="$password"  # Save password for later use
                     break
                 fi
             done
@@ -791,6 +795,7 @@ compare_trust_stores() {
         "PKCS12")
             for password in "${COMMON_PASSWORDS[@]}"; do
                 if openssl pkcs12 -in "$file" -nokeys -passin "pass:$password" -out "$temp_target" 2>/dev/null; then
+                    export STORE_PASSWORD="$password"  # Save password for later use
                     break
                 fi
             done
@@ -837,15 +842,50 @@ compare_trust_stores() {
             log_warning "Missing certificate: $subject"
             
             if [ "$COMPARE_MODE" = false ]; then
-                log_info "Appending missing certificate to $file"
-                cat "$baseline_cert" >> "$file"
+                log_info "Adding missing certificate to $file"
+                
+                # Handle different store types differently
+                case "$file_type" in
+                    "JKS")
+                        # For JKS, we need to use keytool to import
+                        cp "$baseline_cert" "$temp_cert"
+                        if keytool -importcert -noprompt -keystore "$file" -storepass "$STORE_PASSWORD" \
+                            -alias "${alias_prefix}-${alias_counter}" -file "$temp_cert" &>/dev/null; then
+                            log_success "Successfully imported certificate to JKS with alias ${alias_prefix}-${alias_counter}"
+                        else
+                            log_error "Failed to import certificate to JKS"
+                        fi
+                        ((alias_counter++))
+                        ;;
+                    "PKCS12")
+                        # For PKCS12, we need to convert and merge
+                        cp "$baseline_cert" "$temp_cert"
+                        local temp_pkcs12="/tmp/temp_pkcs12_$(date +%s).p12"
+                        if openssl pkcs12 -export -in "$temp_cert" -nokeys \
+                            -passout "pass:$STORE_PASSWORD" -out "$temp_pkcs12" &>/dev/null; then
+                            if openssl pkcs12 -in "$file" -nokeys -passin "pass:$STORE_PASSWORD" \
+                                -passout "pass:$STORE_PASSWORD" -out "$file.tmp" &>/dev/null; then
+                                cat "$temp_pkcs12" >> "$file.tmp"
+                                mv "$file.tmp" "$file"
+                                log_success "Successfully added certificate to PKCS12"
+                            fi
+                        fi
+                        rm -f "$temp_pkcs12"
+                        ;;
+                    "PEM")
+                        # For PEM, we can simply append
+                        cat "$baseline_cert" >> "$file"
+                        log_success "Successfully appended certificate to PEM"
+                        ;;
+                esac
             fi
         fi
     done
     
     # Clean up
-    rm -f "$temp_baseline" "$temp_target"
+    rm -f "$temp_baseline" "$temp_target" "$temp_cert"
     rm -rf "$baseline_dir" "$target_dir"
+    unset STORE_PASSWORD
     
     if [ $missing_certs -eq 0 ]; then
         log_success "Trust store $file contains all baseline certificates"
