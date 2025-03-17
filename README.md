@@ -2,71 +2,31 @@
 
 A comprehensive collection of scripts for managing trust stores across various environments and application frameworks.
 
-## Scripts Overview
+## Repository Structure
 
-| Script | Description |
-|--------|-------------|
+| Directory/File | Description |
+|----------------|-------------|
 | `app_trust_store_update.sh` | Updates application-specific trust stores for Node.js, Python, Ruby, Go, and .NET applications |
-| `auto_trust_store_manager.sh` | Comprehensive script that automates discovery and modification of trust stores in various runtimes |
+| `auto-trust-store-manager/` | Directory containing the comprehensive automated trust store management script |
 | `kubernetes-trust-store.yaml` | Kubernetes manifests for cluster-wide trust store management |
+| `trust-store-management.md` | Comprehensive documentation of trust store management use cases and permutations |
 
-## Automated Trust Store Manager
+## Quick Start
 
-The `auto_trust_store_manager.sh` script is the most comprehensive tool in this collection. It can:
+### Automated Trust Store Manager
 
-- Discover trust stores in various formats (JKS, PKCS12, PEM)
-- Determine if trust stores can be accessed without a password
-- Try common default passwords
-- Append certificates to trust stores
-- Work with Docker containers and Kubernetes resources
-- Log all operations and provide a summary
-
-### Usage
+For the most comprehensive trust store management solution, use the Automated Trust Store Manager:
 
 ```bash
-./auto_trust_store_manager.sh [options]
-
-Options:
-  -d, --directory DIR       Target directory to scan (default: current directory)
-  -c, --certificate FILE    Path to certificate to append (default: auto-generated)
-  -l, --log FILE            Log file path (default: trust_store_scan_YYYYMMDD_HHMMSS.log)
-  -p, --passwords "p1 p2"   Space-separated list of passwords to try (in quotes)
-  -k, --kubernetes          Enable Kubernetes mode (scan ConfigMaps and Secrets)
-  -D, --docker              Enable Docker mode (scan common Docker trust store locations)
-  -r, --restart             Restart affected services after modification
-  -n, --no-backup           Disable backup creation before modification
-  -v, --verbose             Enable verbose output
-  -h, --help                Display this help message
-```
-
-### Examples
-
-```bash
-# Scan current directory for trust stores
+cd auto-trust-store-manager
 ./auto_trust_store_manager.sh
-
-# Scan a specific directory with a custom certificate
-./auto_trust_store_manager.sh -d /path/to/project -c /path/to/cert.pem
-
-# Scan Kubernetes resources and restart affected services
-./auto_trust_store_manager.sh --kubernetes --restart
-
-# Scan Docker containers with verbose output
-./auto_trust_store_manager.sh --docker -v
-
-# Try specific passwords
-./auto_trust_store_manager.sh -p "changeit password secret"
 ```
 
-## Application Trust Store Update
+See the [dedicated README](auto-trust-store-manager/README.md) for detailed usage instructions.
 
-The `app_trust_store_update.sh` script focuses specifically on updating trust stores for various application frameworks:
+### Application Trust Store Update
 
-- Node.js: Updates `NODE_EXTRA_CA_CERTS` environment variable
-- Python/Ruby/Go: Updates `SSL_CERT_FILE` environment variable
-- .NET: Updates application configuration files
-
-### Usage
+For updating application-specific trust stores:
 
 ```bash
 ./app_trust_store_update.sh [options]
@@ -79,16 +39,9 @@ Options:
   -h           Display this help message
 ```
 
-## Kubernetes Trust Store Management
+### Kubernetes Trust Store Management
 
-The `kubernetes-trust-store.yaml` file provides Kubernetes manifests for:
-
-- ConfigMap with CA certificates
-- Init container script for trust store initialization
-- Example deployment with proper trust store configuration
-- CronJob for periodic trust store updates
-
-### Usage
+For Kubernetes environments:
 
 ```bash
 # Apply the Kubernetes manifests
