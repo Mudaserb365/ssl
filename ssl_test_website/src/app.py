@@ -1,9 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from OpenSSL import crypto
 import datetime
 import socket
 import ssl
 import hashlib
+import os
+import json
 
 app = Flask(__name__)
 
@@ -98,6 +100,32 @@ def get_certificate_chain_info():
         if root_ca:
             chain_length += 1
         
+        # Read CA Trust Store
+        ca_trust_store = None
+        try:
+            with open('/etc/nginx/ssl/ca-trust-store.pem', 'rb') as f:
+                ca_data = f.read()
+                if ca_data:
+                    ca_certs = []
+                    current = ca_data
+                    while current:
+                        try:
+                            cert = crypto.load_certificate(crypto.FILETYPE_PEM, current)
+                            ca_certs.append(get_certificate_details(cert))
+                            # Get the remaining data after the current certificate
+                            next_pos = current.find(b'-----BEGIN CERTIFICATE-----', 1)
+                            if next_pos == -1:
+                                break
+                            current = current[next_pos:]
+                        except Exception:
+                            break
+                    ca_trust_store = ca_certs
+        except FileNotFoundError:
+            # Trust store file not found
+            pass
+        except Exception as e:
+            print(f"Error reading CA trust store: {str(e)}")
+        
         # Build certificate chain information
         chain_info = {
             'server_certificate': get_certificate_details(server_cert),
@@ -105,16 +133,52 @@ def get_certificate_chain_info():
             'root_ca': root_ca,
             'protocol_version': protocol_version,
             'cipher_suite': cipher_suite,
-            'chain_length': chain_length
+            'chain_length': chain_length,
+            'ca_trust_store': ca_trust_store
         }
         
         return chain_info
     except Exception as e:
         return {'error': str(e)}
 
+def get_client_cert_info():
+    """Extract client certificate information from request headers."""
+    client_info = {
+        'has_client_cert': False,
+        'client_verify': request.headers.get('X-SSL-Client-Verify', 'None'),
+        'client_dn': request.headers.get('X-SSL-Client-DN', 'None')
+    }
+    
+    if client_info['client_verify'] == 'SUCCESS':
+        client_info['has_client_cert'] = True
+    
+    return client_info
+
 @app.route('/api/cert-info')
 def cert_info():
     return jsonify(get_certificate_chain_info())
+
+@app.route('/mtls')
+def mtls_info():
+    """Endpoint for displaying MTLS connection information."""
+    cert_chain = get_certificate_chain_info()
+    client_cert = get_client_cert_info()
+    
+    result = {
+        'server_certificate': cert_chain.get('server_certificate'),
+        'ca_trust_store': cert_chain.get('ca_trust_store'),
+        'client_certificate': client_cert
+    }
+    
+    return jsonify(result)
+
+@app.route('/api/status')
+def status():
+    """Simple endpoint to check if the API is running."""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 

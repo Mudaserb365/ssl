@@ -5,7 +5,8 @@
 BASELINE_TRUST_CHAIN="baseline-certs/baseline-trust-chain.pem"
 PROJECT_ROOT="."
 JKS_PASSWORDS="changeit changeme password keystore truststore secret"
-BASELINE_URL=""
+BASELINE_URL="https://truststore.example.com/baseline-trust-chain.pem"
+RUN_TESTS=true
 VERBOSE=false
 
 # Function to display help message
@@ -16,7 +17,8 @@ show_help() {
     echo "  -b, --baseline FILE       Path to baseline trust chain (default: baseline-certs/baseline-trust-chain.pem)"
     echo "  -d, --directory DIR       Target directory to scan (default: current directory)"
     echo "  -p, --passwords \"p1 p2\"   Space-separated list of passwords to try for JKS files (in quotes)"
-    echo "  -u, --baseline-url URL    URL to download baseline trust chain"
+    echo "  -u, --baseline-url URL    URL to download baseline trust chain (default: $BASELINE_URL)"
+    echo "  -t, --skip-tests          Skip running validation tests after updates"
     echo "  -v, --verbose             Enable verbose output"
     echo "  -h, --help                Display this help message"
     echo
@@ -53,6 +55,10 @@ while [[ $# -gt 0 ]]; do
             BASELINE_URL="$2"
             shift 2
             ;;
+        -t|--skip-tests)
+            RUN_TESTS=false
+            shift
+            ;;
         -v|--verbose)
             VERBOSE=true
             shift
@@ -75,17 +81,16 @@ handle_jks_error() {
     exit 1
 }
 
-# Download baseline trust chain if URL is provided
-if [ -n "$BASELINE_URL" ]; then
-    echo "Downloading baseline trust chain from $BASELINE_URL..."
-    # Uncomment the following line to enable downloading from URL
-    # curl -s "$BASELINE_URL" -o "$BASELINE_TRUST_CHAIN"
-    echo "Note: URL download is commented out for testing purposes"
-fi
-
-# Check if baseline trust chain exists
-if [ ! -f "$BASELINE_TRUST_CHAIN" ]; then
-    echo "Baseline trust chain not found: $BASELINE_TRUST_CHAIN"
+# First try to download baseline trust chain from URL
+TEMP_BASELINE="/tmp/baseline-trust-chain-$$.pem"
+echo "Downloading baseline trust chain from $BASELINE_URL..."
+if curl -s --fail "$BASELINE_URL" -o "$TEMP_BASELINE"; then
+    echo "Successfully downloaded baseline trust chain from URL"
+    BASELINE_TRUST_CHAIN="$TEMP_BASELINE"
+elif [ -f "$BASELINE_TRUST_CHAIN" ]; then
+    echo "Failed to download from URL, using local file: $BASELINE_TRUST_CHAIN"
+else
+    echo "Failed to download from URL and local file not found: $BASELINE_TRUST_CHAIN"
     exit 1
 fi
 
@@ -155,5 +160,20 @@ find "$PROJECT_ROOT" -type f -name "*.jks" -o -name "*.keystore" -o -name "*.tru
         echo "JKS trust store: $jks_file - COULD NOT ACCESS (tried passwords: $JKS_PASSWORDS)"
     fi
 done
+
+# Run validation tests if enabled
+if [ "$RUN_TESTS" = true ]; then
+    echo "=== Running validation tests ==="
+    if [ -f "./test_truststore.sh" ]; then
+        ./test_truststore.sh
+    else
+        echo "Test script not found. Skipping validation tests."
+    fi
+fi
+
+# Clean up temporary file if it exists
+if [ -f "$TEMP_BASELINE" ]; then
+    rm -f "$TEMP_BASELINE"
+fi
 
 echo "=== Trust store update completed ==="

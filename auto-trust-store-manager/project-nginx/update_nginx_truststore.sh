@@ -8,6 +8,9 @@ BASELINE_TRUST_CHAIN="../baseline-certs/baseline-trust-chain.pem"
 NGINX_CONF_DIR="./conf"
 NGINX_CERTS_DIR="./certs"
 VERBOSE=false
+RUN_VALIDATION=false
+WEBSERVER_HOST="localhost"
+WEBSERVER_PORT="443"
 
 # Function to display help message
 show_help() {
@@ -17,6 +20,9 @@ show_help() {
     echo "  -b, --baseline FILE       Path to baseline trust chain (default: ../baseline-certs/baseline-trust-chain.pem)"
     echo "  -c, --conf-dir DIR        Nginx configuration directory (default: ./conf)"
     echo "  -d, --certs-dir DIR       Nginx certificates directory (default: ./certs)"
+    echo "  -t, --test                Run validation tests after updating trust stores"
+    echo "  --host HOST               Host to test against (default: localhost)"
+    echo "  --port PORT               Port to test against (default: 443)"
     echo "  -v, --verbose             Enable verbose output"
     echo "  -h, --help                Display this help message"
     echo
@@ -24,6 +30,7 @@ show_help() {
     echo "  $0"
     echo "  $0 -c /etc/nginx/conf.d -d /etc/nginx/certs"
     echo "  $0 -b /path/to/custom/baseline.pem"
+    echo "  $0 -t --host example.com --port 443"
     exit 0
 }
 
@@ -45,6 +52,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--certs-dir)
             NGINX_CERTS_DIR="$2"
+            shift 2
+            ;;
+        -t|--test)
+            RUN_VALIDATION=true
+            shift
+            ;;
+        --host)
+            WEBSERVER_HOST="$2"
+            shift 2
+            ;;
+        --port)
+            WEBSERVER_PORT="$2"
             shift 2
             ;;
         -v|--verbose)
@@ -144,6 +163,41 @@ find "$NGINX_CERTS_DIR" -name "*.pem" | while read -r pem_file; do
         fi
     fi
 done
+
+# Run validation tests if enabled
+if [ "$RUN_VALIDATION" = true ]; then
+    echo "=== Running validation tests ==="
+    SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+    VALIDATION_SCRIPT="$SCRIPT_DIR/../../test-suite/run_validation_tests.sh"
+    
+    if [ -f "$VALIDATION_SCRIPT" ]; then
+        # Set verbose flag for validation script
+        VALIDATION_VERBOSE=""
+        if [ "$VERBOSE" = true ]; then
+            VALIDATION_VERBOSE="-v"
+        fi
+        
+        # Run validation tests
+        "$VALIDATION_SCRIPT" \
+            -d "$NGINX_CERTS_DIR" \
+            -h "$WEBSERVER_HOST" \
+            -p "$WEBSERVER_PORT" \
+            $VALIDATION_VERBOSE
+        
+        VALIDATION_RESULT=$?
+        if [ $VALIDATION_RESULT -eq 0 ]; then
+            echo "✅ Trust store validation tests PASSED"
+        else
+            echo "❌ Trust store validation tests FAILED"
+            echo "Warning: Trust stores were updated but validation tests failed."
+            echo "You may need to check your Nginx configuration or connectivity."
+            echo "Remember to reload Nginx after updating trust stores."
+        fi
+    else
+        echo "Warning: Validation script not found at $VALIDATION_SCRIPT"
+        echo "Skipping validation tests."
+    fi
+fi
 
 echo "=== Nginx trust store update completed ==="
 echo "Note: Remember to reload Nginx after updating trust stores:"
