@@ -99,6 +99,20 @@ The tool automatically detects the following project types:
 - **PKCS12**: `.p12`, `.pfx`
 - **PEM Bundles**: `.pem`, `.crt`, `.cert`
 
+## Future Roadmap
+
+We have an ambitious roadmap for future releases of the Trust Store Manager, including:
+
+- Certificate expiry monitoring and alerting
+- Trust path validation across multiple root stores
+- TLS configuration analysis for endpoints
+- CI/CD pipeline integrations
+- Containerization and multi-cloud support
+- mTLS testing capabilities
+- Advanced security features
+
+For more details, please see our [ROADMAP.md](./ROADMAP.md) file.
+
 ## Support
 
 For issues and feature requests, please visit:
