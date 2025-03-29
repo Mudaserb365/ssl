@@ -1,11 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -41,6 +46,28 @@ type Config struct {
 	BaselineURL     string
 	CompareOnly     bool
 	LogWriter       io.Writer
+	WebhookURL      string    // URL to send logs to
+	WebhookKey      string    // API key for the webhook
+	WebhookEnabled  bool      // Whether webhook logging is enabled
+	HostInfo        *HostInfo // Host information for logging
+}
+
+// HostInfo contains information about the host system
+type HostInfo struct {
+	Hostname    string   `json:"hostname"`
+	IPAddresses []string `json:"ip_addresses"`
+	OS          string   `json:"os"`
+	OSVersion   string   `json:"os_version"`
+	Arch        string   `json:"arch"`
+}
+
+// LogEntry represents a log entry for webhook sending
+type LogEntry struct {
+	Timestamp string      `json:"timestamp"`
+	Level     string      `json:"level"` // INFO, SUCCESS, WARNING, ERROR, DEBUG
+	Message   string      `json:"message"`
+	Host      *HostInfo   `json:"host"`
+	Metadata  interface{} `json:"metadata,omitempty"`
 }
 
 func main() {
@@ -57,6 +84,9 @@ func main() {
 		Verbose:         false,
 		BaselineURL:     "",
 		CompareOnly:     false,
+		WebhookEnabled:  false,
+		WebhookURL:      "",
+		WebhookKey:      "",
 	}
 
 	// Parse command line flags
@@ -95,6 +125,11 @@ func main() {
 	flag.BoolVar(&config.CompareOnly, "C", config.CompareOnly, "Only compare trust stores")
 	flag.BoolVar(&config.CompareOnly, "compare-only", config.CompareOnly, "Only compare trust stores")
 
+	// Add webhook flags
+	flag.StringVar(&config.WebhookURL, "webhook-url", config.WebhookURL, "URL to send logs to (e.g., https://example.com/logs)")
+	flag.StringVar(&config.WebhookKey, "webhook-key", config.WebhookKey, "API key for the webhook")
+	webhookEnabled := flag.Bool("webhook", false, "Enable webhook logging")
+
 	// Help flag handler
 	help := flag.Bool("h", false, "Display help message")
 	helpLong := flag.Bool("help", false, "Display help message")
@@ -124,6 +159,30 @@ func main() {
 	defer logFile.Close()
 	config.LogWriter = io.MultiWriter(os.Stdout, logFile)
 	logger = log.New(config.LogWriter, "", 0)
+
+	// Setup webhook logging if enabled
+	config.WebhookEnabled = *webhookEnabled
+	if config.WebhookEnabled {
+		if config.WebhookURL == "" {
+			fmt.Println("Error: webhook-url is required when webhook logging is enabled")
+			os.Exit(1)
+		}
+
+		// Collect host information
+		hostInfo, err := collectHostInfo()
+		if err != nil {
+			fmt.Printf("Warning: Failed to collect host information: %v\n", err)
+			// Continue even if host info collection fails
+		}
+		config.HostInfo = hostInfo
+
+		// Test webhook connection
+		err = sendWebhookLog(config, "INFO", "Webhook logging initialized")
+		if err != nil {
+			fmt.Printf("Error: Failed to connect to webhook: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	// Run the trust store manager
 	err = runTrustStoreManager(config)
@@ -168,11 +227,18 @@ func printUsage() {
 // runTrustStoreManager is the main function that orchestrates the trust store management process
 func runTrustStoreManager(config Config) error {
 	// Initial log entry
-	logInfo("Trust Store Scan started - " + time.Now().Format("2006-01-02 15:04:05"))
+	if config.WebhookEnabled {
+		logInfoWithWebhook(config, "Trust Store Scan started - "+time.Now().Format("2006-01-02 15:04:05"))
+	} else {
+		logInfo("Trust Store Scan started - " + time.Now().Format("2006-01-02 15:04:05"))
+	}
 
 	// Validate certificate path or generate a test certificate
 	err := validateCertificate(&config)
 	if err != nil {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, fmt.Sprintf("Certificate validation failed: %v", err))
+		}
 		return err
 	}
 
@@ -180,26 +246,47 @@ func runTrustStoreManager(config Config) error {
 	if config.BaselineURL != "" {
 		err := downloadBaselineStore(config)
 		if err != nil {
+			if config.WebhookEnabled {
+				logErrorWithWebhook(config, fmt.Sprintf("Baseline download failed: %v", err))
+			}
 			return err
+		}
+		if config.WebhookEnabled {
+			logSuccessWithWebhook(config, fmt.Sprintf("Downloaded baseline store from %s", config.BaselineURL))
 		}
 	}
 
 	// Check for required tools
 	err = checkDependencies(config)
 	if err != nil {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, fmt.Sprintf("Dependency check failed: %v", err))
+		}
 		return err
 	}
 
 	// Scan for trust stores based on mode
 	if config.KubernetesMode {
+		if config.WebhookEnabled {
+			logInfoWithWebhook(config, "Starting Kubernetes scanning mode")
+		}
 		err = scanKubernetes(config)
 	} else if config.DockerMode {
+		if config.WebhookEnabled {
+			logInfoWithWebhook(config, "Starting Docker scanning mode")
+		}
 		err = scanDocker(config)
 	} else {
+		if config.WebhookEnabled {
+			logInfoWithWebhook(config, fmt.Sprintf("Starting directory scanning in %s", config.TargetDir))
+		}
 		err = scanDirectory(config)
 	}
 
 	if err != nil {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, fmt.Sprintf("Scanning failed: %v", err))
+		}
 		return err
 	}
 
@@ -207,8 +294,17 @@ func runTrustStoreManager(config Config) error {
 	if config.RestartServices {
 		err = restartAffectedServices(config)
 		if err != nil {
-			logWarning(fmt.Sprintf("Error restarting services: %v", err))
+			if config.WebhookEnabled {
+				logWarningWithWebhook(config, fmt.Sprintf("Error restarting services: %v", err))
+			} else {
+				logWarning(fmt.Sprintf("Error restarting services: %v", err))
+			}
 		}
+	}
+
+	// Final success log
+	if config.WebhookEnabled {
+		logSuccessWithWebhook(config, "Trust Store Scan completed successfully")
 	}
 
 	return nil
@@ -247,4 +343,153 @@ func logDebug(config Config, message string) {
 	if config.Verbose {
 		logger.Printf("[DEBUG] %s\n", message)
 	}
+}
+
+// These updated logging functions will be used by the application to log with webhook support
+func logInfoWithWebhook(config Config, message string) {
+	logInfo(message)
+	if config.WebhookEnabled {
+		// Only send important logs to webhook to avoid flooding
+		sendWebhookLog(config, "INFO", message)
+	}
+}
+
+func logSuccessWithWebhook(config Config, message string) {
+	logSuccess(message)
+	if config.WebhookEnabled {
+		sendWebhookLog(config, "SUCCESS", message)
+	}
+}
+
+func logWarningWithWebhook(config Config, message string) {
+	logWarning(message)
+	if config.WebhookEnabled {
+		sendWebhookLog(config, "WARNING", message)
+	}
+}
+
+func logErrorWithWebhook(config Config, message string) {
+	logError(message)
+	if config.WebhookEnabled {
+		sendWebhookLog(config, "ERROR", message)
+	}
+}
+
+// collectHostInfo gathers information about the host system
+func collectHostInfo() (*HostInfo, error) {
+	hostInfo := &HostInfo{
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+		OSVersion: "", // Will try to get this
+	}
+
+	// Get hostname
+	hostname, err := os.Hostname()
+	if err == nil {
+		hostInfo.Hostname = hostname
+	} else {
+		hostInfo.Hostname = "unknown"
+	}
+
+	// Get IP addresses
+	addrs, err := net.InterfaceAddrs()
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil || ipnet.IP.To16() != nil {
+					hostInfo.IPAddresses = append(hostInfo.IPAddresses, ipnet.IP.String())
+				}
+			}
+		}
+	}
+
+	// Try to get OS version
+	switch runtime.GOOS {
+	case "windows":
+		cmd := exec.Command("cmd", "/c", "ver")
+		output, err := cmd.Output()
+		if err == nil {
+			hostInfo.OSVersion = strings.TrimSpace(string(output))
+		}
+	case "darwin":
+		cmd := exec.Command("sw_vers", "-productVersion")
+		output, err := cmd.Output()
+		if err == nil {
+			hostInfo.OSVersion = strings.TrimSpace(string(output))
+		}
+	case "linux":
+		// Try to get from /etc/os-release
+		data, err := os.ReadFile("/etc/os-release")
+		if err == nil {
+			lines := strings.Split(string(data), "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "VERSION_ID=") {
+					hostInfo.OSVersion = strings.Trim(line[11:], "\"")
+					break
+				}
+			}
+		}
+
+		// If that fails, try lsb_release
+		if hostInfo.OSVersion == "" {
+			cmd := exec.Command("lsb_release", "-rs")
+			output, err := cmd.Output()
+			if err == nil {
+				hostInfo.OSVersion = strings.TrimSpace(string(output))
+			}
+		}
+	}
+
+	return hostInfo, nil
+}
+
+// sendWebhookLog sends a log entry to the configured webhook
+func sendWebhookLog(config Config, level, message string) error {
+	if !config.WebhookEnabled || config.WebhookURL == "" {
+		return nil // Webhook not enabled, nothing to do
+	}
+
+	// Create log entry
+	logEntry := LogEntry{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Level:     level,
+		Message:   message,
+		Host:      config.HostInfo,
+	}
+
+	// Convert to JSON
+	jsonData, err := json.Marshal(logEntry)
+	if err != nil {
+		return fmt.Errorf("failed to marshal log entry: %v", err)
+	}
+
+	// Prepare URL with API key if provided
+	url := config.WebhookURL
+	if config.WebhookKey != "" {
+		if strings.Contains(url, "?") {
+			url += "&apikey=" + config.WebhookKey
+		} else {
+			url += "?apikey=" + config.WebhookKey
+		}
+	}
+
+	// Send HTTP request
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonData)))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send webhook request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("webhook returned error status: %d", resp.StatusCode)
+	}
+
+	return nil
 }

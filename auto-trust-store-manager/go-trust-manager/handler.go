@@ -18,13 +18,21 @@ func processTrustStore(filePath string, config Config) error {
 		return fmt.Errorf("error detecting file type: %v", err)
 	}
 
-	logInfo(fmt.Sprintf("Processing trust store: %s (Type: %s)", filePath, fileType))
+	if config.WebhookEnabled {
+		logInfoWithWebhook(config, fmt.Sprintf("Processing trust store: %s (Type: %s)", filePath, fileType))
+	} else {
+		logInfo(fmt.Sprintf("Processing trust store: %s (Type: %s)", filePath, fileType))
+	}
 
 	// If baseline URL is provided, compare first
 	if config.BaselineURL != "" {
 		err := compareTrustStores(filePath, config.BaselineURL, fileType, config)
 		if err != nil {
-			logWarning(fmt.Sprintf("Error comparing trust stores: %v", err))
+			if config.WebhookEnabled {
+				logWarningWithWebhook(config, fmt.Sprintf("Error comparing trust stores: %v", err))
+			} else {
+				logWarning(fmt.Sprintf("Error comparing trust stores: %v", err))
+			}
 		}
 
 		// If in compare-only mode, don't modify the trust store
@@ -42,7 +50,11 @@ func processTrustStore(filePath string, config Config) error {
 	case FileTypePEM:
 		return handlePEM(filePath, config)
 	case FileTypeUnknown:
-		logWarning(fmt.Sprintf("Unknown file type for %s, skipping", filePath))
+		if config.WebhookEnabled {
+			logWarningWithWebhook(config, fmt.Sprintf("Unknown file type for %s, skipping", filePath))
+		} else {
+			logWarning(fmt.Sprintf("Unknown file type for %s, skipping", filePath))
+		}
 		return nil
 	}
 
@@ -77,11 +89,18 @@ func createBackup(filePath string, config Config) (string, error) {
 
 // handleJKS processes a JKS trust store
 func handleJKS(filePath string, config Config) error {
-	logInfo(fmt.Sprintf("Processing JKS trust store: %s", filePath))
+	if config.WebhookEnabled {
+		logInfoWithWebhook(config, fmt.Sprintf("Processing JKS trust store: %s", filePath))
+	} else {
+		logInfo(fmt.Sprintf("Processing JKS trust store: %s", filePath))
+	}
 
 	// Check if keytool is available
 	keytoolPath, err := findKeytool()
 	if err != nil {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, fmt.Sprintf("Keytool not found: %v", err))
+		}
 		return fmt.Errorf("keytool not found: %v", err)
 	}
 
@@ -97,7 +116,11 @@ func handleJKS(filePath string, config Config) error {
 		cmd := exec.Command(keytoolPath, "-list", "-keystore", filePath, "-storepass", password)
 		err := cmd.Run()
 		if err == nil {
-			logSuccess(fmt.Sprintf("Successfully accessed JKS with password: %s", password))
+			if config.WebhookEnabled {
+				logSuccessWithWebhook(config, fmt.Sprintf("Successfully accessed JKS with password: %s", password))
+			} else {
+				logSuccess(fmt.Sprintf("Successfully accessed JKS with password: %s", password))
+			}
 			successPassword = password
 			success = true
 			break
@@ -105,12 +128,18 @@ func handleJKS(filePath string, config Config) error {
 	}
 
 	if !success {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, "Could not access JKS file with any of the provided passwords")
+		}
 		return fmt.Errorf("could not access JKS file with any of the provided passwords")
 	}
 
 	// Create backup
 	backupPath, err := createBackup(filePath, config)
 	if err != nil {
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, fmt.Sprintf("Failed to create backup: %v", err))
+		}
 		return fmt.Errorf("failed to create backup: %v", err)
 	}
 
@@ -130,7 +159,12 @@ func handleJKS(filePath string, config Config) error {
 
 	err = cmd.Run()
 	if err != nil {
-		logError(fmt.Sprintf("Failed to import certificate to %s: %v, %s", filePath, err, stderr.String()))
+		errMsg := fmt.Sprintf("Failed to import certificate to %s: %v, %s", filePath, err, stderr.String())
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, errMsg)
+		} else {
+			logError(errMsg)
+		}
 
 		// Restore from backup if available
 		if backupPath != "" {
@@ -151,7 +185,12 @@ func handleJKS(filePath string, config Config) error {
 
 	err = verifyCmd.Run()
 	if err != nil {
-		logError(fmt.Sprintf("Failed to verify certificate import to %s", filePath))
+		errMsg := fmt.Sprintf("Failed to verify certificate import to %s", filePath)
+		if config.WebhookEnabled {
+			logErrorWithWebhook(config, errMsg)
+		} else {
+			logError(errMsg)
+		}
 
 		// Restore from backup if available
 		if backupPath != "" {
@@ -161,7 +200,12 @@ func handleJKS(filePath string, config Config) error {
 		return fmt.Errorf("failed to verify certificate import")
 	}
 
-	logSuccess(fmt.Sprintf("Successfully imported certificate to %s with alias %s", filePath, alias))
+	successMsg := fmt.Sprintf("Successfully imported certificate to %s with alias %s", filePath, alias)
+	if config.WebhookEnabled {
+		logSuccessWithWebhook(config, successMsg)
+	} else {
+		logSuccess(successMsg)
+	}
 
 	// Log command to remove the test certificate if needed
 	logInfo(fmt.Sprintf("To remove the test certificate: keytool -delete -keystore \"%s\" -storepass \"%s\" -alias \"%s\"",

@@ -36,6 +36,33 @@ Trust Store Manager is a cross-platform utility for discovering and managing tru
 - **Enhanced Certificate Generation**: Native Go implementation for certificate creation when OpenSSL isn't available
 - **Improved Trust Store Detection**: More comprehensive search for trust stores in various configurations
 - **Better Docker/Kubernetes Integration**: Enhanced container support
+- **Remote Webhook Logging**: Send operation logs to centralized monitoring systems via HTTP webhooks
+
+### Monitoring & Observability
+- **Webhook Integration**: Send logs to centralized monitoring systems via HTTP
+- **Host Information Collection**: Automatically gather and report system details with logs
+- **JSON-Formatted Logs**: Structured logging for easier parsing and analysis
+- **Configurable API Authentication**: Support for API keys when sending logs to protected endpoints
+
+#### Webhook JSON Format
+Logs are sent in a standardized JSON format that includes:
+```json
+{
+  "timestamp": "2023-03-29T13:45:30Z",
+  "level": "INFO|SUCCESS|WARNING|ERROR",
+  "message": "Log message text",
+  "host": {
+    "hostname": "server-name",
+    "ip_addresses": ["192.168.1.100", "10.0.0.5"],
+    "os": "linux|windows|darwin",
+    "os_version": "20.04|10.0.19042|12.3.1",
+    "arch": "amd64|arm64"
+  },
+  "metadata": {}
+}
+```
+
+This format facilitates easy integration with log aggregation systems like ELK Stack, Graylog, or cloud logging services.
 
 ## Platform-Specific Notes
 
@@ -58,6 +85,12 @@ Download the appropriate binary for your platform and run. No installation requi
 
 ```
 ./trust-store-manager -v
+```
+
+For centralized logging and monitoring, use the webhook functionality:
+
+```
+./trust-store-manager --webhook --webhook-url https://logs.example.com/api --webhook-key your-api-key
 ```
 
 See the README.md for complete documentation and usage examples. 
