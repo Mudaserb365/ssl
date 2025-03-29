@@ -1,0 +1,29 @@
+# Ignore compiled binaries
+*.exe
+*.out
+*.dll
+*.so
+*.dylib
+
+# Ignore packaged distributions
+*.tar.gz
+*.zip
+*.tgz
+
+# Build directory
+build/
+
+# Dependency directories
+vendor/
+node_modules/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db 
