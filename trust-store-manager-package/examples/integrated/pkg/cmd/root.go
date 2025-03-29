@@ -6,9 +6,9 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "trust-store-manager",
+	Use:   "mrp",
 	Short: "A tool for managing certificate trust stores across platforms",
-	Long: `Trust Store Manager is a comprehensive tool for managing certificate
+	Long: `MRP (Managed Root Program) is a comprehensive tool for managing certificate
 trust stores across different platforms, runtimes, and environments.
 
 It supports detecting, updating, and validating trust stores in Java, Python,
@@ -30,7 +30,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.trust-store-manager.yaml)")
+	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.mrp.yaml)")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 
 	// Cobra also supports local flags, which will only run

@@ -30,8 +30,8 @@ The certificate file should be in PEM format. This command will check
 if the certificate forms a complete and trusted chain to a root CA.
 
 Example:
-  trust-store-manager validate file server.crt
-  trust-store-manager validate file -r /path/to/roots client.pem`,
+  mrp validate file server.crt
+  mrp validate file -r /path/to/roots client.pem`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		certFile := args[0]
@@ -78,8 +78,8 @@ against trusted root CAs. The domain can include a port number, which
 defaults to 443 if not specified.
 
 Example:
-  trust-store-manager validate domain example.com
-  trust-store-manager validate domain example.com:8443`,
+  mrp validate domain example.com
+  mrp validate domain example.com:8443`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		domain := args[0]
@@ -118,8 +118,8 @@ The domains file should contain one domain per line. For each domain,
 this command will connect to the domain and validate its certificate.
 
 Example:
-  trust-store-manager validate domains domains.txt
-  trust-store-manager validate domains -o reports domains.txt`,
+  mrp validate domains domains.txt
+  mrp validate domains -o reports domains.txt`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		domainsFile := args[0]

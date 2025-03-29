@@ -1,13 +1,13 @@
-# Integrated Trust Store Manager
+# Integrated MRP (Managed Root Program)
 
-This example demonstrates how to create a unified, standalone executable that integrates the trust path validator as a subcommand within the Trust Store Manager application.
+This example demonstrates how to create a unified, standalone executable that integrates the trust path validator as a subcommand within the MRP application.
 
 ## Architecture
 
-The integrated Trust Store Manager is built with a modular architecture:
+The integrated MRP is built with a modular architecture:
 
 ```
-cmd/trust-store-manager/    # Main application entry point
+cmd/mrp/                   # Main application entry point
 pkg/
   ├── cmd/                  # Command-line interface
   │    ├── root.go          # Root command and shared flags
@@ -25,7 +25,7 @@ pkg/
 The application provides a hierarchical command structure:
 
 ```
-trust-store-manager
+mrp
   ├── validate              # Certificate validation commands
   │    ├── file             # Validate a certificate file
   │    ├── domain           # Validate a domain's certificate
@@ -39,19 +39,19 @@ trust-store-manager
 ### Validating a Certificate File
 
 ```bash
-trust-store-manager validate file server.crt
+mrp validate file server.crt
 ```
 
 ### Validating a Domain's Certificate
 
 ```bash
-trust-store-manager validate domain example.com
+mrp validate domain example.com
 ```
 
 ### Validating Multiple Domains
 
 ```bash
-trust-store-manager validate domains domains.txt -o reports
+mrp validate domains domains.txt -o reports
 ```
 
 ## Building
@@ -59,8 +59,8 @@ trust-store-manager validate domains domains.txt -o reports
 To build the standalone executable:
 
 ```bash
-cd cmd/trust-store-manager
-go build -o trust-store-manager
+cd cmd/mrp
+go build -o mrp
 ```
 
 ## Dependencies
