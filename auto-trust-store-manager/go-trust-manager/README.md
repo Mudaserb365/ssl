@@ -93,7 +93,16 @@ go build -o trust-store-manager
 
 ## Remote Logging
 
-The Trust Store Manager supports sending logs to a remote webhook endpoint for centralized monitoring and auditing. This is particularly useful when running the tool across multiple servers.
+The Trust Store Manager supports sending logs to a remote webhook endpoint for centralized monitoring and auditing. This is particularly useful when running the tool across multiple servers or in distributed environments.
+
+### Webhook Features
+
+- **Real-time Monitoring**: All significant operations are logged as they happen
+- **Host Information Collection**: Automatically gathers system details with each log
+- **Authentication Support**: Secure your endpoints with API key authentication
+- **Standardized JSON Format**: Consistent log structure for easy parsing
+- **Multiple Log Levels**: INFO, SUCCESS, WARNING, ERROR levels for different scenarios
+- **Metadata Support**: Additional context data for complex operations
 
 ### Webhook JSON Format
 
@@ -115,6 +124,69 @@ When webhook logging is enabled, the tool sends JSON-formatted log entries to th
 }
 ```
 
+#### Example Log Entries
+
+**Successful Operation**:
+```json
+{
+  "timestamp": "2023-03-29T15:31:20Z",
+  "level": "SUCCESS",
+  "message": "Successfully imported certificate to /path/to/truststore.jks with alias trust-store-scanner-1648546280",
+  "host": {
+    "hostname": "app-server-01",
+    "ip_addresses": ["192.168.1.100", "10.0.0.5"],
+    "os": "linux",
+    "os_version": "20.04",
+    "arch": "amd64"
+  },
+  "metadata": {
+    "certificate_count": 75,
+    "operation": "import",
+    "file_type": "JKS"
+  }
+}
+```
+
+**Error Condition**:
+```json
+{
+  "timestamp": "2023-03-29T15:32:10Z",
+  "level": "ERROR",
+  "message": "Failed to import certificate to /path/to/truststore.jks: keystore password was incorrect",
+  "host": {
+    "hostname": "app-server-02",
+    "ip_addresses": ["192.168.1.101"],
+    "os": "windows",
+    "os_version": "10.0.19042",
+    "arch": "amd64"
+  },
+  "metadata": {
+    "attempted_passwords": 3,
+    "file_type": "JKS"
+  }
+}
+```
+
+**Warning Message**:
+```json
+{
+  "timestamp": "2023-03-29T15:33:45Z",
+  "level": "WARNING",
+  "message": "Certificate already exists in /path/to/cert-bundle.pem",
+  "host": {
+    "hostname": "web-server-05",
+    "ip_addresses": ["10.0.1.25"],
+    "os": "darwin",
+    "os_version": "12.3.1",
+    "arch": "arm64"
+  },
+  "metadata": {
+    "certificate_fingerprint": "A1:B2:C3:D4:E5:F6:...",
+    "file_type": "PEM"
+  }
+}
+```
+
 ### Setting Up Webhook Logging
 
 To enable webhook logging, use the following command-line flags:
@@ -130,6 +202,64 @@ If your webhook endpoint requires authentication:
 ```
 
 The API key will be appended to the URL as a query parameter: `?apikey=your-api-key`
+
+### Integration Examples
+
+#### ELK Stack Integration
+
+For Elasticsearch, Logstash, and Kibana integration:
+
+```bash
+./trust-store-manager --webhook --webhook-url http://logstash-server:8080/json
+```
+
+With a corresponding Logstash configuration:
+
+```
+input {
+  http {
+    port => 8080
+    response_code => 200
+  }
+}
+filter {
+  json {
+    source => "message"
+  }
+}
+output {
+  elasticsearch {
+    hosts => ["elasticsearch:9200"]
+    index => "trust-store-manager-%{+YYYY.MM.dd}"
+  }
+}
+```
+
+#### Custom Webhook Server
+
+A simple Node.js webhook receiver example:
+
+```javascript
+const express = require('express');
+const app = express();
+app.use(express.json());
+
+app.post('/logs', (req, res) => {
+  console.log(JSON.stringify(req.body, null, 2));
+  // Save to database, forward to monitoring system, etc.
+  res.sendStatus(200);
+});
+
+app.listen(3000, () => {
+  console.log('Webhook receiver listening on port 3000');
+});
+```
+
+Run the trust store manager with:
+
+```bash
+./trust-store-manager --webhook --webhook-url http://localhost:3000/logs
+```
 
 ## Dependencies
 

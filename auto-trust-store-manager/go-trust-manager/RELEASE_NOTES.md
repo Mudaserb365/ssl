@@ -43,6 +43,9 @@ Trust Store Manager is a cross-platform utility for discovering and managing tru
 - **Host Information Collection**: Automatically gather and report system details with logs
 - **JSON-Formatted Logs**: Structured logging for easier parsing and analysis
 - **Configurable API Authentication**: Support for API keys when sending logs to protected endpoints
+- **Rich Metadata Context**: Additional operation-specific data for deeper analysis
+- **Multiple Log Levels**: Distinct levels for different operational situations
+- **Integration Ready**: Pre-configured for popular logging ecosystems
 
 #### Webhook JSON Format
 Logs are sent in a standardized JSON format that includes:
@@ -63,6 +66,48 @@ Logs are sent in a standardized JSON format that includes:
 ```
 
 This format facilitates easy integration with log aggregation systems like ELK Stack, Graylog, or cloud logging services.
+
+#### Metadata Enrichment
+
+The `metadata` field provides operation-specific context that varies by log type:
+
+**Trust Store Operations**:
+```json
+"metadata": {
+  "file_type": "JKS|PEM|PKCS12",
+  "operation": "import|update|verify",
+  "certificate_count": 75,
+  "certificate_fingerprint": "SHA256:..."
+}
+```
+
+**System Events**:
+```json
+"metadata": {
+  "cpu_usage": 12.5,
+  "memory_usage": 256.4,
+  "disk_free": 10240
+}
+```
+
+**Error Conditions**:
+```json
+"metadata": {
+  "error_code": "AUTH_FAILED",
+  "attempted_passwords": 3,
+  "stacktrace": "...",
+  "recoverable": true
+}
+```
+
+#### Use Cases for Webhook Logging
+
+- **Compliance Tracking**: Maintain audit logs of all certificate operations
+- **Fleet Management**: Monitor trust store updates across distributed systems
+- **Alerting**: Create alerts based on ERROR level logs or specific patterns
+- **Trend Analysis**: Track performance metrics over time for optimization
+- **Security Monitoring**: Detect suspicious patterns or unauthorized operations
+- **Troubleshooting**: Aggregate logs for easier debugging of distributed issues
 
 ## Platform-Specific Notes
 
