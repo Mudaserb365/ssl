@@ -426,77 +426,149 @@ func scanDocker(config Config) error {
 	return nil
 }
 
-// findKeytool searches for the keytool executable
+// findKeytool searches for the keytool executable using targeted path checks
 func findKeytool() (string, error) {
-	// First check if keytool is in PATH
+	// First check if keytool is in PATH (most efficient)
 	keytoolPath, err := exec.LookPath("keytool")
 	if err == nil {
 		logSuccess(fmt.Sprintf("Found keytool in PATH: %s", keytoolPath))
 		return keytoolPath, nil
 	}
 
-	// List of potential Java home locations by OS
-	javaHomePaths := []string{}
+	// Check JAVA_HOME environment variable (second most efficient)
+	javaHome := os.Getenv("JAVA_HOME")
+	if javaHome != "" {
+		// Try common bin locations relative to JAVA_HOME
+		locations := []string{
+			filepath.Join(javaHome, "bin", "keytool"),
+			filepath.Join(javaHome, "jre", "bin", "keytool"),
+		}
 
-	// Add OS-specific paths
-	switch runtime.GOOS {
-	case "windows":
-		// Windows paths
-		javaHomePaths = append(javaHomePaths,
-			"C:\\Program Files\\Java",
-			"C:\\Program Files (x86)\\Java",
-		)
-	case "darwin":
-		// macOS paths
-		javaHomePaths = append(javaHomePaths,
-			"/Library/Java/JavaVirtualMachines",
-			"/System/Library/Java/JavaVirtualMachines",
-		)
-	case "linux":
-		// Linux paths
-		javaHomePaths = append(javaHomePaths,
-			"/usr/lib/jvm",
-			"/usr/java",
-			"/usr/local/java",
-			"/opt/java",
-			"/opt/jdk",
-			"/opt/openjdk",
-		)
-	}
+		// Add .exe extension for Windows
+		if runtime.GOOS == "windows" {
+			locations = append(
+				locations,
+				filepath.Join(javaHome, "bin", "keytool.exe"),
+				filepath.Join(javaHome, "jre", "bin", "keytool.exe"),
+			)
+		}
 
-	// Add HOME/.sdkman paths
-	home, err := os.UserHomeDir()
-	if err == nil {
-		javaHomePaths = append(javaHomePaths, filepath.Join(home, ".sdkman", "candidates", "java"))
-	}
-
-	// Search in each potential Java home
-	for _, baseDir := range javaHomePaths {
-		if _, err := os.Stat(baseDir); err == nil {
-			// Walk through the directory to find keytool
-			err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				if !info.IsDir() && info.Name() == "keytool" {
-					if isExecutable(path) {
-						logSuccess(fmt.Sprintf("Found keytool: %s", path))
-						keytoolPath = path
-						return filepath.SkipAll
-					}
-				}
-
-				return nil
-			})
-
-			if err == nil && keytoolPath != "" {
-				return keytoolPath, nil
+		// Check each potential location
+		for _, location := range locations {
+			if fileExists(location) && isExecutable(location) {
+				logSuccess(fmt.Sprintf("Found keytool via JAVA_HOME: %s", location))
+				return location, nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("keytool not found")
+	// Targeted search in OS-specific locations
+	var searchPaths []string
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: Check Program Files with specific JDK/JRE version patterns
+		programFiles := []string{
+			os.Getenv("ProgramFiles"),
+			os.Getenv("ProgramFiles(x86)"),
+			"C:\\Program Files",
+			"C:\\Program Files (x86)",
+		}
+
+		// Common Java installation patterns on Windows
+		javaPatterns := []string{
+			"Java\\jdk*\\bin\\keytool.exe",
+			"Java\\jre*\\bin\\keytool.exe",
+			"OpenJDK\\*\\bin\\keytool.exe",
+			"AdoptOpenJDK\\*\\bin\\keytool.exe",
+			"Zulu\\*\\bin\\keytool.exe",
+			"Amazon Corretto\\*\\bin\\keytool.exe",
+		}
+
+		// Combine paths with patterns
+		for _, dir := range programFiles {
+			if dir == "" {
+				continue
+			}
+			for _, pattern := range javaPatterns {
+				searchPaths = append(searchPaths, filepath.Join(dir, pattern))
+			}
+		}
+
+	case "darwin":
+		// macOS: Check specific JDK installation locations
+		searchPaths = []string{
+			"/Library/Java/JavaVirtualMachines/*/Contents/Home/bin/keytool",
+			"/System/Library/Java/JavaVirtualMachines/*/Contents/Home/bin/keytool",
+			"/usr/local/opt/openjdk*/bin/keytool",
+			"/usr/bin/keytool",
+			"/usr/local/bin/keytool",
+		}
+
+	case "linux":
+		// Linux: Check common JDK installation locations
+		searchPaths = []string{
+			"/usr/lib/jvm/*/bin/keytool",
+			"/usr/lib/jvm/*/jre/bin/keytool",
+			"/usr/java/*/bin/keytool",
+			"/usr/java/*/jre/bin/keytool",
+			"/usr/local/java/*/bin/keytool",
+			"/opt/java/*/bin/keytool",
+			"/opt/jdk/*/bin/keytool",
+			"/opt/openjdk/*/bin/keytool",
+			"/usr/bin/keytool",
+			"/usr/local/bin/keytool",
+		}
+	}
+
+	// Check each path specifically, using a glob pattern for efficiency
+	for _, pathPattern := range searchPaths {
+		matches, err := filepath.Glob(pathPattern)
+		if err != nil {
+			continue // Skip invalid patterns
+		}
+
+		for _, match := range matches {
+			if fileExists(match) && isExecutable(match) {
+				logSuccess(fmt.Sprintf("Found keytool: %s", match))
+				return match, nil
+			}
+		}
+	}
+
+	// Check user home directory for SDK installations (like SDKMAN)
+	home, err := os.UserHomeDir()
+	if err == nil {
+		var sdkPaths []string
+
+		switch runtime.GOOS {
+		case "windows":
+			sdkPaths = []string{
+				filepath.Join(home, ".sdkman", "candidates", "java", "*", "bin", "keytool.exe"),
+			}
+		default:
+			sdkPaths = []string{
+				filepath.Join(home, ".sdkman", "candidates", "java", "*", "bin", "keytool"),
+				filepath.Join(home, ".jabba", "jdk", "*", "bin", "keytool"),
+			}
+		}
+
+		for _, pathPattern := range sdkPaths {
+			matches, err := filepath.Glob(pathPattern)
+			if err != nil {
+				continue
+			}
+
+			for _, match := range matches {
+				if fileExists(match) && isExecutable(match) {
+					logSuccess(fmt.Sprintf("Found keytool in user SDK: %s", match))
+					return match, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("keytool not found in any standard location")
 }
 
 // isExecutable checks if a file is executable
