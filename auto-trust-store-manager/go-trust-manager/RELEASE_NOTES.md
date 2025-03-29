@@ -37,6 +37,9 @@ Trust Store Manager is a cross-platform utility for discovering and managing tru
 - **Improved Trust Store Detection**: More comprehensive search for trust stores in various configurations
 - **Better Docker/Kubernetes Integration**: Enhanced container support
 - **Remote Webhook Logging**: Send operation logs to centralized monitoring systems via HTTP webhooks
+- **Interactive Engineer-Friendly Mode**: Step-by-step guided walkthrough for trust store management
+- **Automatic Project Type Detection**: Smart identification of Java, Python, and Node.js projects
+- **Runtime-Specific Optimizations**: Tailored workflows for different programming languages
 
 ### Monitoring & Observability
 - **Webhook Integration**: Send logs to centralized monitoring systems via HTTP
@@ -132,10 +135,50 @@ Download the appropriate binary for your platform and run. No installation requi
 ./trust-store-manager -v
 ```
 
+For an interactive, guided experience (recommended for first-time users):
+
+```
+./trust-store-manager
+```
+
 For centralized logging and monitoring, use the webhook functionality:
 
 ```
 ./trust-store-manager --webhook --webhook-url https://logs.example.com/api --webhook-key your-api-key
 ```
 
-See the README.md for complete documentation and usage examples. 
+See the README.md for complete documentation and usage examples.
+
+## Engineer Experience
+
+The Trust Store Manager v1.0.0 includes significant improvements to the engineer experience:
+
+### Interactive Walkthrough Mode
+
+When run without arguments, the tool enters a guided walkthrough mode that:
+
+- Automatically detects project types based on code and configuration files
+- Provides contextual help for each option
+- Offers sensible defaults based on detected runtime
+- Explains technical concepts in simple terms
+- Shows a final configuration summary before execution
+
+### Simplified Decision Making
+
+The tool simplifies complex trust store management by:
+
+- Identifying the programming language in use (Java, Python, Node.js)
+- Suggesting appropriate trust store formats for each runtime
+- Offering pre-configured profiles for common scenarios
+- Using clear, non-technical language where possible
+- Providing contextual examples during the walkthrough
+
+### Error Resilience
+
+The interactive mode includes enhanced error handling:
+
+- Input validation prevents common mistakes
+- Detailed error messages with suggested fixes
+- Safe defaults to prevent accidental trust store corruption
+- Automatic creation of backups before any modifications
+- Step-by-step verification of changes after completion 

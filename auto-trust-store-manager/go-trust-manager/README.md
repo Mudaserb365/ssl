@@ -18,6 +18,8 @@ A cross-platform command-line tool written in Go for automating the discovery an
 - Creates backups before modifying trust stores
 - Cross-platform support (Windows, Linux, macOS)
 - Remote logging via webhooks for centralized monitoring
+- Interactive guided walkthrough for engineers
+- Automatic project type detection (Java, Python, Node.js)
 
 ## Installation
 
@@ -47,6 +49,27 @@ go build -o trust-store-manager
 ./trust-store-manager [options]
 ```
 
+### Operation Modes
+
+The Trust Store Manager supports two primary modes of operation:
+
+1. **Interactive Walkthrough** (default mode when run without arguments)
+   - Guides you step-by-step through the trust store management process
+   - Automatically detects project type (Java, Python, Node.js)
+   - Provides sensible defaults and explains each option
+
+2. **Automatic Mode** (when run with specific arguments)
+   - For scripting, CI/CD pipelines, or advanced users
+   - Requires all parameters to be provided via command line flags
+
+```bash
+# Run in interactive walkthrough mode explicitly
+./trust-store-manager --interactive
+
+# Run in fully automatic mode (no prompts)
+./trust-store-manager --auto [other options]
+```
+
 ### Options
 
 ```
@@ -63,6 +86,10 @@ go build -o trust-store-manager
   -C, --compare-only        Only compare trust stores, don't modify them
   -h, --help                Display this help message
   
+  # Mode options
+  --interactive             Run in interactive walkthrough mode (default if no arguments)
+  --auto                    Run in automatic mode (non-interactive)
+  
   # Webhook logging options
   --webhook                 Enable webhook logging
   --webhook-url URL         URL to send logs to (e.g., https://example.com/logs)
@@ -72,8 +99,11 @@ go build -o trust-store-manager
 ### Examples
 
 ```bash
-# Scan current directory and append auto-generated certificate
+# Run in interactive walkthrough mode (default if no arguments)
 ./trust-store-manager
+
+# Scan current directory and append auto-generated certificate
+./trust-store-manager --auto
 
 # Scan specific directory and append specific certificate
 ./trust-store-manager -d /path/to/project -c /path/to/cert.pem
@@ -90,6 +120,95 @@ go build -o trust-store-manager
 # Send logs to a webhook for centralized monitoring
 ./trust-store-manager --webhook --webhook-url https://logs.example.com/api/logs --webhook-key your-api-key
 ```
+
+## Interactive Walkthrough
+
+When run without arguments, Trust Store Manager enters an interactive walkthrough mode that guides engineers through the process:
+
+### Project Detection
+
+The tool automatically analyzes your project directory to detect the programming language and runtime:
+
+```
+=== Trust Store Manager Interactive Walkthrough ===
+This wizard will guide you through the process of managing trust stores in your project.
+
+Enter the project directory path [/path/to/current/dir]: 
+
+Analyzing project directory...
+
+Detected java project. Continue with this project type? [y/N]: y
+```
+
+The tool can detect multiple project types:
+- **Java**: Recognizes Maven (pom.xml), Gradle (build.gradle), JAR files, and Java source code
+- **Python**: Identifies requirements.txt, setup.py, Pipfile, virtual environments, and Python code
+- **Node.js**: Detects package.json, node_modules, JavaScript, and TypeScript files
+
+### Operation Configuration
+
+You'll be guided through selecting an operation mode and configuring trust store settings:
+
+```
+Configuring options for java project...
+
+Select scan mode:
+1. Discovery only - Find and report trust stores without modifications
+2. Update existing - Update only existing trust stores
+3. Comprehensive - Find, create, and update trust stores
+Enter your choice (1-3) [1]: 2
+
+Select certificate source:
+1. Auto-generate a new certificate
+2. Use an existing certificate file
+3. Download from URL
+Enter your choice (1-3) [1]: 1
+```
+
+### Runtime-Specific Options
+
+The tool provides tailored options based on the detected project type:
+
+**For Java projects:**
+```
+Java KeyStore (JKS) requires passwords for access.
+Enter default JKS password [changeit]: 
+Add additional passwords to try? [y/N]: y
+Enter additional password (or leave empty to finish): mysecret
+Enter additional password (or leave empty to finish): 
+```
+
+### Advanced Options
+
+Configure additional settings for fine-grained control:
+
+```
+Configure advanced options? [y/N]: y
+Enable verbose logging? [y/N]: y
+Create backups before modifying trust stores? [y/N]: y
+```
+
+### Configuration Summary
+
+Before executing, the tool displays a summary of all selected options:
+
+```
+=== Configuration Summary ===
+Project directory: /path/to/project
+Project type: java
+Scan mode: update
+
+Certificate: Auto-generated
+JKS passwords: changeit, mysecret
+Verbose mode: true
+Create backups: true
+
+Proceed with these settings? [y/N]: y
+
+Executing trust store management operation...
+```
+
+This interactive mode makes it easier for engineers to use the tool correctly without having to understand all the command-line options upfront.
 
 ## Remote Logging
 
