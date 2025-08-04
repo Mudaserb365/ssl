@@ -2,7 +2,7 @@
 
 A comprehensive collection of **shell scripts** for automated SSL/TLS trust store management across various environments. This implementation provides maximum compatibility and simplicity for system administrators and environments where bash scripting is preferred.
 
-## 🎯 Overview
+## Overview
 
 The Bash Trust Store Manager provides reliable, easy-to-understand scripts for:
 - **Discovering** trust stores in various formats (JKS, PKCS12, PEM)
@@ -10,55 +10,56 @@ The Bash Trust Store Manager provides reliable, easy-to-understand scripts for:
 - **Updating** trust stores with new certificates
 - **Managing** trust stores across different runtime environments
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 bash-trust-store-manager/
-├── auto_trust_store_manager.sh     # 🔧 Main automation script
-├── compare_and_update.sh           # 📊 Simplified comparison/update wrapper
-├── app_trust_store_update.sh       # 🔄 Application-specific trust store updates
-├── compare_trust_stores.sh         # 📈 PEM trust store comparison utility
-├── compare_jks_stores.sh           # 🔐 JKS trust store comparison utility
-├── docker_trust_store_*.sh         # 🐳 Docker container trust store management
-├── cf_trust_store_setup.sh         # ☁️ AWS CloudFormation trust store setup
-├── test_truststore.sh              # 🧪 Trust store validation and testing
-├── baseline-certs/                 # 📜 Reference certificate collection
-├── project-*/                      # 💼 Runtime-specific example projects
-├── examples/                       # 📚 Configuration examples and templates
-├── ssl_test_website/               # 🌐 SSL/TLS testing environment
-└── test-suite/                     # 🔬 Comprehensive test scenarios
+├── trust-store-manager.sh           # Main automation script
+├── auto_trust_store_manager.sh      # Comprehensive legacy implementation
+├── compare_and_update.sh            # Simplified comparison/update wrapper
+├── app_trust_store_update.sh        # Application-specific trust store updates
+├── compare_trust_stores.sh          # PEM trust store comparison utility
+├── compare_jks_stores.sh            # JKS trust store comparison utility
+├── docker_trust_store_*.sh          # Docker container trust store management
+├── cf_trust_store_setup.sh          # AWS CloudFormation trust store setup
+├── test_truststore.sh               # Trust store validation and testing
+├── baseline-certs/                  # Reference certificate collection
+├── project-*/                       # Runtime-specific example projects
+├── examples/                        # Configuration examples and templates
+├── ssl_test_website/                # SSL/TLS testing environment
+└── test-suite/                      # Comprehensive test scenarios
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic Usage
 
 **1. Dry-Run Mode (Preview Changes)**
 ```bash
 # Show what would be changed without making modifications
-./auto_trust_store_manager.sh --noop -d /path/to/project -v
+./trust-store-manager.sh --noop -d /path/to/project -v
 ```
 
 **2. Update Trust Stores**
 ```bash
 # Add certificate to all trust stores in a project
-./auto_trust_store_manager.sh -d /path/to/project -c /path/to/certificate.pem
+./trust-store-manager.sh -d /path/to/project -c /path/to/certificate.pem
 ```
 
 **3. Compare Against Baseline**
 ```bash
 # Compare trust stores with a baseline certificate bundle
-./auto_trust_store_manager.sh -b baseline-certs/baseline-trust-chain.pem -d /path/to/project -C
+./trust-store-manager.sh -b baseline-certs/baseline-trust-chain.pem -d /path/to/project -C
 ```
 
-## 🛠️ Core Scripts
+## Core Scripts
 
-### 1. Main Automation Script (`auto_trust_store_manager.sh`)
+### 1. Main Automation Script (`trust-store-manager.sh`)
 
 The primary tool for automated trust store discovery and management.
 
 ```bash
-Usage: ./auto_trust_store_manager.sh [options]
+Usage: ./trust-store-manager.sh [options]
 
 Core Options:
   -d, --directory DIR       Target directory to scan (default: current directory)
@@ -104,7 +105,7 @@ Specialized script for updating application-specific trust stores.
 ./app_trust_store_update.sh -s /path/to/standard-trust-store.pem -d /path/to/projects
 ```
 
-## 🌐 Environment-Specific Scripts
+## Environment-Specific Scripts
 
 ### Docker Container Management
 ```bash
@@ -130,7 +131,7 @@ Specialized script for updating application-specific trust stores.
 ./compare_jks_stores.sh -s /path/to/standard.jks -t /path/to/target.jks -p changeit
 ```
 
-## 📚 Example Projects
+## Example Projects
 
 The repository includes complete example projects for different runtime environments:
 
@@ -154,7 +155,7 @@ The repository includes complete example projects for different runtime environm
 - SSL/TLS configuration examples
 - Certificate reload procedures
 
-## 🔧 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 ```bash
@@ -175,18 +176,18 @@ which kubectl    # Kubernetes mode support
 chmod +x *.sh
 
 # 3. Test installation
-./auto_trust_store_manager.sh --help
+./trust-store-manager.sh --help
 ```
 
-## 📖 Common Usage Patterns
+## Common Usage Patterns
 
 ### Development Workflow
 ```bash
 # 1. Preview changes first
-./auto_trust_store_manager.sh --noop -d ./my-project -v
+./trust-store-manager.sh --noop -d ./my-project -v
 
 # 2. Execute changes if preview looks good
-./auto_trust_store_manager.sh -d ./my-project -v
+./trust-store-manager.sh -d ./my-project -v
 
 # 3. Verify all trust stores are updated
 ./test_truststore.sh -d ./my-project
@@ -195,7 +196,7 @@ chmod +x *.sh
 ### CI/CD Integration
 ```bash
 # Automated pipeline example
-./auto_trust_store_manager.sh \
+./trust-store-manager.sh \
   -b https://company.com/baseline-certs.pem \
   -d /app \
   --compare-only \
@@ -205,14 +206,14 @@ chmod +x *.sh
 ### Production Deployment
 ```bash
 # Safe production update with backups
-./auto_trust_store_manager.sh \
+./trust-store-manager.sh \
   -d /production/app \
   -c /secure/new-certificate.pem \
   --verbose \
   --restart
 ```
 
-## 🎛️ Configuration Examples
+## Configuration Examples
 
 ### Kubernetes Deployment (`examples/kubernetes-trust-store.yaml`)
 Complete Kubernetes manifests for cluster-wide trust store management.
@@ -223,7 +224,7 @@ Docker Compose configuration with trust store volume mounts.
 ### CloudFormation (`examples/cloudformation-example.yaml`)
 AWS CloudFormation template with trust store initialization.
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Test Suite
 ```bash
@@ -246,14 +247,14 @@ docker-compose up
 curl -v https://localhost:8443/test
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
 **JKS Password Problems**
 ```bash
 # Try multiple passwords
-./auto_trust_store_manager.sh -p "changeit changeme password keystore secret"
+./trust-store-manager.sh -p "changeit changeme password keystore secret"
 
 # Check keystore info
 keytool -list -keystore /path/to/keystore.jks
@@ -283,13 +284,13 @@ curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 ### Debug Mode
 ```bash
 # Run with maximum verbosity
-bash -x ./auto_trust_store_manager.sh -v -d /path/to/project
+bash -x ./trust-store-manager.sh -v -d /path/to/project
 
 # Check log files
 tail -f trust_store_scan_*.log
 ```
 
-## 🔐 Security Best Practices
+## Security Best Practices
 
 1. **Validate Sources**: Always verify certificate sources and baseline URLs
 2. **Use Dry-Run**: Test with `--noop` before making changes
@@ -297,7 +298,7 @@ tail -f trust_store_scan_*.log
 4. **Access Control**: Restrict script execution to authorized users
 5. **Audit Logging**: Enable verbose logging for audit trails
 
-## 📋 System Requirements
+## System Requirements
 
 ### Minimum Requirements
 - **Bash 4.0+**
@@ -311,12 +312,12 @@ tail -f trust_store_scan_*.log
 - **curl/wget** (for downloading baseline certificates)
 
 ### Tested Platforms
-- ✅ **Linux** (Ubuntu, CentOS, RHEL, Alpine)
-- ✅ **macOS** (10.15+)
-- ✅ **Unix variants** (FreeBSD, OpenBSD)
-- ⚠️ **Windows** (WSL, Git Bash, Cygwin)
+- **Linux** (Ubuntu, CentOS, RHEL, Alpine)
+- **macOS** (10.15+)
+- **Unix variants** (FreeBSD, OpenBSD)
+- **Windows** (WSL, Git Bash, Cygwin)
 
-## 🤝 Contributing
+## Contributing
 
 1. **Fork the project** and create a feature branch
 2. **Test thoroughly** on multiple platforms
@@ -324,11 +325,11 @@ tail -f trust_store_scan_*.log
 4. **Update documentation** for any new features
 5. **Submit pull request** with clear description
 
-## 📝 License
+## License
 
 MIT License - Free for commercial and personal use.
 
-## 📞 Support
+## Support
 
 - **Documentation**: See individual script help (`--help`)
 - **Examples**: Check the `examples/` directory

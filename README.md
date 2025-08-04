@@ -2,7 +2,7 @@
 
 A comprehensive collection of tools for managing SSL/TLS trust stores across various environments and application frameworks. This project provides both **Bash scripts** and **Go software** implementations for automated trust store discovery, comparison, and management.
 
-## 🏗️ Project Structure
+## Project Structure
 
 This repository contains **two distinct, self-contained projects**:
 
@@ -11,14 +11,14 @@ This repository contains **two distinct, self-contained projects**:
 | [`bash-trust-store-manager/`](./bash-trust-store-manager/) | **Shell-based tools** with broad compatibility | System administration, simple automation, legacy environments |
 | [`go-trust-store-manager/`](./go-trust-store-manager/) | **Cross-platform binary** with advanced features | Enterprise environments, CI/CD pipelines, complex automation |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Choose Your Implementation
 
 **Option 1: Bash Scripts** (Universal compatibility)
 ```bash
 cd bash-trust-store-manager
-./auto_trust_store_manager.sh --help
+./trust-store-manager.sh --help
 ```
 
 **Option 2: Go Binary** (Advanced features)
@@ -27,24 +27,24 @@ cd go-trust-store-manager
 ./bin/trust-store-manager-darwin-arm64 --help  # Choose your platform
 ```
 
-## 🎯 Core Capabilities
+## Core Capabilities
 
 Both implementations provide identical core functionality:
 
-- **🔍 Automatic Discovery**: Find trust stores in various formats (JKS, PKCS12, PEM)
-- **📊 Baseline Comparison**: Compare trust stores against standard certificate bundles
-- **🔄 Synchronized Updates**: Add/remove certificates consistently across environments
-- **💾 Safe Operations**: Automatic backups before modifications
-- **🔍 Dry-Run Mode**: Preview changes with `--noop` flag
-- **🌐 Multi-Platform**: Support for Java, Python, Node.js, Docker, Kubernetes
+- **Automatic Discovery**: Find trust stores in various formats (JKS, PKCS12, PEM)
+- **Baseline Comparison**: Compare trust stores against standard certificate bundles
+- **Synchronized Updates**: Add/remove certificates consistently across environments
+- **Safe Operations**: Automatic backups before modifications
+- **Dry-Run Mode**: Preview changes with `--noop` flag
+- **Multi-Platform**: Support for Java, Python, Node.js, Docker, Kubernetes
 
 ### Advanced Features (Go Only)
-- **🎛️ Interactive Mode**: Guided walkthrough for beginners
-- **📡 Webhook Logging**: Enterprise monitoring and audit trails
-- **🏗️ Project Detection**: Automatic runtime environment identification
-- **⚡ Performance**: Optimized for large-scale operations
+- **Interactive Mode**: Guided walkthrough for beginners
+- **Webhook Logging**: Enterprise monitoring and audit trails
+- **Project Detection**: Automatic runtime environment identification
+- **Performance**: Optimized for large-scale operations
 
-## 📚 Documentation
+## Documentation
 
 - **[Trust Store Management Guide](./trust-store-management.md)** - Comprehensive usage documentation
 - **[Getting Started Guide](./starthere.md)** - Quick introduction and concepts
@@ -55,7 +55,7 @@ Both implementations provide identical core functionality:
 - **[Go Implementation Tutorial](./go-trust-store-manager/TUTORIAL.md)**
 - **[Go Implementation Roadmap](./go-trust-store-manager/ROADMAP.md)**
 
-## 🛠️ Installation
+## Installation
 
 ### Bash Scripts
 ```bash
@@ -70,12 +70,12 @@ cd go-trust-store-manager
 ./install.sh  # Install binary to your PATH
 ```
 
-## 📖 Examples
+## Examples
 
 ### Dry-Run Mode (Preview Changes)
 ```bash
 # Bash
-./bash-trust-store-manager/auto_trust_store_manager.sh --noop -d /path/to/project -v
+./bash-trust-store-manager/trust-store-manager.sh --noop -d /path/to/project -v
 
 # Go  
 ./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --noop --auto -d /path/to/project -v
@@ -84,7 +84,7 @@ cd go-trust-store-manager
 ### Add Certificate to All Trust Stores
 ```bash
 # Bash
-./bash-trust-store-manager/auto_trust_store_manager.sh -d /path/to/project -c /path/to/cert.pem
+./bash-trust-store-manager/trust-store-manager.sh -d /path/to/project -c /path/to/cert.pem
 
 # Go
 ./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --auto -d /path/to/project -c /path/to/cert.pem
@@ -95,7 +95,7 @@ cd go-trust-store-manager
 ./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --interactive
 ```
 
-## 🔧 System Requirements
+## System Requirements
 
 ### Common Requirements
 - **OpenSSL** - Certificate manipulation
@@ -108,19 +108,19 @@ cd go-trust-store-manager
 ### Go-Specific  
 - No additional dependencies (statically compiled binaries)
 
-## 🌍 Environment Support
+## Environment Support
 
 | Environment | Bash Scripts | Go Binary | Notes |
 |-------------|--------------|-----------|-------|
-| **Local Development** | ✅ | ✅ | Full feature support |
-| **CI/CD Pipelines** | ✅ | ✅ | Automated operations |
-| **Docker Containers** | ✅ | ✅ | Container-aware scanning |
-| **Kubernetes Clusters** | ✅ | ✅ | ConfigMap and Secret support |
-| **Cloud Platforms** | ✅ | ✅ | AWS, Azure, GCP compatible |
-| **Legacy Systems** | ✅ | ⚠️ | Bash preferred for older systems |
-| **Windows** | ⚠️ | ✅ | Go binary recommended |
+| **Local Development** | Supported | Supported | Full feature support |
+| **CI/CD Pipelines** | Supported | Supported | Automated operations |
+| **Docker Containers** | Supported | Supported | Container-aware scanning |
+| **Kubernetes Clusters** | Supported | Supported | ConfigMap and Secret support |
+| **Cloud Platforms** | Supported | Supported | AWS, Azure, GCP compatible |
+| **Legacy Systems** | Supported | Limited | Bash preferred for older systems |
+| **Windows** | Limited | Supported | Go binary recommended |
 
-## 🤝 Choosing Between Implementations
+## Choosing Between Implementations
 
 ### Use **Bash Scripts** When:
 - Working with legacy or restricted environments
@@ -136,7 +136,7 @@ cd go-trust-store-manager
 - Performance is important for large-scale operations
 - Want a single, self-contained executable
 
-## 🔐 Security Considerations
+## Security Considerations
 
 - Always validate certificate sources and URLs
 - Use `--noop` mode to preview changes before execution
@@ -144,11 +144,11 @@ cd go-trust-store-manager
 - Implement proper access controls for trust store management
 - Monitor all trust store modifications via logging/webhooks
 
-## 📝 License
+## License
 
 MIT License - See individual project directories for specific details.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please:
 1. Choose the appropriate implementation (bash or go)
@@ -156,7 +156,7 @@ Contributions are welcome! Please:
 3. Test changes in both discovery and modification modes
 4. Update relevant documentation
 
-## 📞 Support
+## Support
 
 - **Issues**: Open GitHub issues for bugs or feature requests
 - **Documentation**: Refer to project-specific README files

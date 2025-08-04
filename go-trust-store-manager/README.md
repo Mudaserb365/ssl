@@ -2,45 +2,45 @@
 
 A **high-performance, cross-platform binary** for automated SSL/TLS trust store management. Built in Go for enterprise environments requiring advanced features, scalability, and cross-platform compatibility.
 
-## 🎯 Overview
+## Overview
 
 The Go Trust Store Manager provides:
-- **🚀 Performance**: Optimized for large-scale operations and enterprise environments
-- **🎛️ Interactive Mode**: Guided walkthrough with automatic project detection
-- **📡 Enterprise Features**: Webhook logging, centralized monitoring, audit trails
-- **🌍 Cross-Platform**: Native binaries for Linux, macOS, Windows (x64/ARM64)
-- **⚡ Zero Dependencies**: Self-contained executables with no external requirements
+- **Performance**: Optimized for large-scale operations and enterprise environments
+- **Interactive Mode**: Guided walkthrough with automatic project detection
+- **Enterprise Features**: Webhook logging, centralized monitoring, audit trails
+- **Cross-Platform**: Native binaries for Linux, macOS, Windows (x64/ARM64)
+- **Zero Dependencies**: Self-contained executables with no external requirements
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 go-trust-store-manager/
-├── bin/                              # 🔧 Pre-compiled binaries for all platforms
+├── bin/                              # Pre-compiled binaries for all platforms
 │   ├── trust-store-manager-darwin-amd64
 │   ├── trust-store-manager-darwin-arm64
 │   ├── trust-store-manager-linux-amd64
 │   ├── trust-store-manager-linux-arm64
 │   └── trust-store-manager-windows-amd64.exe
-├── main.go                           # 🎯 Main application entry point
-├── handler.go                        # 🔄 Trust store processing logic
-├── scanner.go                        # 🔍 Trust store discovery engine
-├── certificate.go                    # 📜 Certificate manipulation utilities
-├── utils.go                          # 🛠️ Common utility functions
-├── build.sh                          # 🏗️ Cross-platform build script
-├── Makefile                          # 📋 Build automation
-├── go.mod                            # 📦 Go module definition
-├── examples/                         # 📚 Usage examples and integrations
-├── scripts/                          # 🔧 Helper scripts and demos
-├── test_keystores/                   # 🧪 Test certificates and keystores
-├── README.md                         # 📖 This documentation
-├── TUTORIAL.md                       # 🎓 Step-by-step usage guide
-├── ROADMAP.md                        # 🗺️ Future development plans
-├── RELEASE_NOTES.md                  # 📋 Version history and changes
-├── install.sh                        # ⚙️ Installation script
-└── package.sh                        # 📦 Distribution packaging script
+├── main.go                           # Main application entry point
+├── handler.go                        # Trust store processing logic
+├── scanner.go                        # Trust store discovery engine
+├── certificate.go                    # Certificate manipulation utilities
+├── utils.go                          # Common utility functions
+├── build.sh                          # Cross-platform build script
+├── Makefile                          # Build automation
+├── go.mod                            # Go module definition
+├── examples/                         # Usage examples and integrations
+├── scripts/                          # Helper scripts and demos
+├── test_keystores/                   # Test certificates and keystores
+├── README.md                         # This documentation
+├── TUTORIAL.md                       # Step-by-step usage guide
+├── ROADMAP.md                        # Future development plans
+├── RELEASE_NOTES.md                  # Version history and changes
+├── install.sh                        # Installation script
+└── package.sh                        # Distribution packaging script
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -80,7 +80,7 @@ go-trust-store-manager/
 ./bin/trust-store-manager-darwin-arm64 --auto -d /path/to/project -c /path/to/cert.pem
 ```
 
-## 🛠️ Command Reference
+## Command Reference
 
 ### Core Operation Flags
 ```bash
@@ -115,7 +115,7 @@ Enterprise Features:
       --webhook-key KEY     API key for webhook authentication
 ```
 
-## 🎛️ Interactive Mode Features
+## Interactive Mode Features
 
 ### Automatic Project Detection
 The tool analyzes your project directory and automatically detects:
@@ -152,7 +152,7 @@ Create backups: true
 Proceed with these settings? [y/N]: y
 ```
 
-## 🌐 Advanced Features
+## Advanced Features
 
 ### Webhook Logging & Enterprise Monitoring
 
@@ -201,7 +201,7 @@ Perfect for enterprise environments requiring centralized audit trails:
 ./bin/trust-store-manager-linux-amd64 --kubernetes --auto -v
 ```
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### Development Workflows
 
@@ -282,7 +282,7 @@ done
   --verbose
 ```
 
-## 🔧 Building from Source
+## Building from Source
 
 ### Prerequisites
 - **Go 1.20+** (latest version recommended)
@@ -320,7 +320,7 @@ go build -ldflags="-s -w -X main.version=1.2.3" -o trust-store-manager
 CGO_ENABLED=0 go build -a -ldflags="-s -w" -o trust-store-manager
 ```
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Built-in Test Environment
 ```bash
@@ -340,7 +340,7 @@ CGO_ENABLED=0 go build -a -ldflags="-s -w" -o trust-store-manager
   --verbose
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -384,7 +384,7 @@ curl -X POST -H "Content-Type: application/json" \
   -c /path/to/cert.pem
 ```
 
-## 🔐 Security Features
+## Security Features
 
 - **No Network Calls**: Except for explicit baseline URL downloads and webhooks
 - **Backup Creation**: Automatic backups before any trust store modifications
@@ -392,7 +392,7 @@ curl -X POST -H "Content-Type: application/json" \
 - **Audit Logging**: Comprehensive logging with optional webhook integration
 - **Access Control**: Respects file system permissions and user privileges
 
-## 🚀 Performance Characteristics
+## Performance Characteristics
 
 - **Fast Startup**: < 100ms initialization time
 - **Memory Efficient**: < 50MB memory usage for typical operations
@@ -400,7 +400,7 @@ curl -X POST -H "Content-Type: application/json" \
 - **Large Scale**: Tested with 1000+ trust stores in single operation
 - **Cross-Platform**: Identical performance across operating systems
 
-## 📋 System Requirements
+## System Requirements
 
 ### Minimum Requirements
 - **No dependencies** (statically compiled binaries)
@@ -413,11 +413,11 @@ curl -X POST -H "Content-Type: application/json" \
 - **kubectl** (for Kubernetes mode functionality)
 
 ### Supported Platforms
-- ✅ **Linux x64/ARM64** (Ubuntu, CentOS, RHEL, Alpine, etc.)
-- ✅ **macOS x64/ARM64** (10.15+, including Apple Silicon)
-- ✅ **Windows x64** (Windows 10+, Server 2019+)
+- **Linux x64/ARM64** (Ubuntu, CentOS, RHEL, Alpine, etc.)
+- **macOS x64/ARM64** (10.15+, including Apple Silicon)
+- **Windows x64** (Windows 10+, Server 2019+)
 
-## 🗺️ Roadmap
+## Roadmap
 
 See [ROADMAP.md](./ROADMAP.md) for detailed future plans including:
 - Certificate lifecycle management
@@ -425,7 +425,7 @@ See [ROADMAP.md](./ROADMAP.md) for detailed future plans including:
 - Advanced security features
 - Performance optimizations
 
-## 🤝 Contributing
+## Contributing
 
 1. **Fork the repository** and create a feature branch
 2. **Write tests** for new functionality
@@ -434,14 +434,14 @@ See [ROADMAP.md](./ROADMAP.md) for detailed future plans including:
 5. **Update documentation** as needed
 6. **Submit a pull request** with clear description
 
-## 📝 License
+## License
 
 MIT License - See [LICENSE](./LICENSE) for details.
 
-## 📞 Support & Resources
+## Support & Resources
 
-- **📖 Tutorial**: [TUTORIAL.md](./TUTORIAL.md) - Step-by-step usage guide
-- **🗺️ Roadmap**: [ROADMAP.md](./ROADMAP.md) - Future development plans
-- **📋 Releases**: [RELEASE_NOTES.md](./RELEASE_NOTES.md) - Version history
-- **🧪 Examples**: [examples/](./examples/) - Integration examples
-- **🔧 Scripts**: [scripts/](./scripts/) - Helper tools and demos 
+- **Tutorial**: [TUTORIAL.md](./TUTORIAL.md) - Step-by-step usage guide
+- **Roadmap**: [ROADMAP.md](./ROADMAP.md) - Future development plans
+- **Releases**: [RELEASE_NOTES.md](./RELEASE_NOTES.md) - Version history
+- **Examples**: [examples/](./examples/) - Integration examples
+- **Scripts**: [scripts/](./scripts/) - Helper tools and demos 
