@@ -1,0 +1,14 @@
+[0;33m[NOOP][0m Running in dry-run mode - no changes will be made
+[0;34m[INFO][0m Trust Store Scan started - 2025-08-04 14:32:01
+[0;34m[INFO][0m Generated test certificate at /var/folders/qr/97gzhp994hxbmxbv9lqz4w300000gn/T/trust-store-manager1361839285/test-cert.pem
+[0;32m[SUCCESS][0m Found keytool in PATH: /usr/bin/keytool
+[0;34m[INFO][0m Scanning directory: .
+[0;34m[INFO][0m Found 4 potential trust stores
+[0;34m[INFO][0m Processing trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/examples/sample.pem (Type: PEM)
+[0;33m[NOOP][0m Would process trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/examples/sample.pem (Type: PEM)
+[0;34m[INFO][0m Processing trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/cert/test.crt (Type: PEM)
+[0;33m[NOOP][0m Would process trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/cert/test.crt (Type: PEM)
+[0;34m[INFO][0m Processing trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/destination/destination.jks (Type: JKS)
+[0;33m[NOOP][0m Would process trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/destination/destination.jks (Type: JKS)
+[0;34m[INFO][0m Processing trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/source/source.jks (Type: JKS)
+[0;33m[NOOP][0m Would process trust store: /Users/mudaser/Software /experiment/go-trust-store-manager/test_keystores/source/source.jks (Type: JKS)

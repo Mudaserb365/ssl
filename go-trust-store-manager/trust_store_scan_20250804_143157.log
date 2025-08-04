@@ -1,0 +1,18 @@
+Trust Store Scan Log - Mon Aug  4 14:31:57 AEST 2025
+Command: ../bash-trust-store-manager/trust-store-manager.sh --noop -d . -v
+----------------------------------------
+[DEBUG] All required dependencies found
+[0;33m[NOOP][0m Running in dry-run mode - no changes will be made
+[INFO] Starting trust store scan...
+[INFO] Target directory: .
+[INFO] Verbose mode: true
+[INFO] Backup enabled: false
+[INFO] Noop mode: true
+[INFO] Scanning directory: .
+[INFO] Processing trust store: [INFO] Scanning directory: .
+[0;33m[NOOP][0m Would process trust store: [INFO] Scanning directory: .
+[INFO] Processing trust store: ./test_keystores/source/source.jks
+[0;33m[NOOP][0m Would process trust store: ./test_keystores/source/source.jks
+[INFO] Processing trust store: ./test_keystores/destination/destination.jks
+[0;33m[NOOP][0m Would process trust store: ./test_keystores/destination/destination.jks
+[INFO] Trust store scan completed

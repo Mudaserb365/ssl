@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ssl-test:
+    build: .
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+    volumes:
+      - ./certs:/etc/nginx/ssl
+    environment:
+      - TZ=UTC
+    restart: unless-stopped 

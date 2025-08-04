@@ -1,229 +1,163 @@
 # Trust Store Management Tools
 
-A comprehensive collection of scripts for managing trust stores across various environments and application frameworks.
+A comprehensive collection of tools for managing SSL/TLS trust stores across various environments and application frameworks. This project provides both **Bash scripts** and **Go software** implementations for automated trust store discovery, comparison, and management.
 
-## Repository Structure
+## 🏗️ Project Structure
 
-| Directory/File | Description |
-|----------------|-------------|
-| `app_trust_store_update.sh` | Updates application-specific trust stores for Node.js, Python, Ruby, Go, and .NET applications |
-| `auto-trust-store-manager/` | Directory containing the comprehensive automated trust store management script |
-| `kubernetes-trust-store.yaml` | Kubernetes manifests for cluster-wide trust store management |
-| `trust-store-management.md` | Comprehensive documentation of trust store management use cases and permutations |
+This repository contains **two distinct, self-contained projects**:
 
-## Quick Start
+| Project | Description | Best For |
+|---------|-------------|----------|
+| [`bash-trust-store-manager/`](./bash-trust-store-manager/) | **Shell-based tools** with broad compatibility | System administration, simple automation, legacy environments |
+| [`go-trust-store-manager/`](./go-trust-store-manager/) | **Cross-platform binary** with advanced features | Enterprise environments, CI/CD pipelines, complex automation |
 
-### Automated Trust Store Manager
+## 🚀 Quick Start
 
-For the most comprehensive trust store management solution, use the Automated Trust Store Manager:
+### Choose Your Implementation
 
+**Option 1: Bash Scripts** (Universal compatibility)
 ```bash
-cd auto-trust-store-manager
-./auto_trust_store_manager.sh
+cd bash-trust-store-manager
+./auto_trust_store_manager.sh --help
 ```
 
-See the [dedicated README](auto-trust-store-manager/README.md) for detailed usage instructions.
-
-### Application Trust Store Update
-
-For updating application-specific trust stores:
-
+**Option 2: Go Binary** (Advanced features)
 ```bash
-./app_trust_store_update.sh [options]
-
-Options:
-  -s <path>    Path to standard trust store (default: /etc/ssl/certs/ca-certificates.crt)
-  -d <path>    Application directory to scan (default: current directory)
-  -m <mode>    Mode: 1=check, 2=update (default: 2)
-  -u <url>     URL to download standard trust store
-  -h           Display this help message
+cd go-trust-store-manager
+./bin/trust-store-manager-darwin-arm64 --help  # Choose your platform
 ```
 
-### Kubernetes Trust Store Management
+## 🎯 Core Capabilities
 
-For Kubernetes environments:
+Both implementations provide identical core functionality:
 
+- **🔍 Automatic Discovery**: Find trust stores in various formats (JKS, PKCS12, PEM)
+- **📊 Baseline Comparison**: Compare trust stores against standard certificate bundles
+- **🔄 Synchronized Updates**: Add/remove certificates consistently across environments
+- **💾 Safe Operations**: Automatic backups before modifications
+- **🔍 Dry-Run Mode**: Preview changes with `--noop` flag
+- **🌐 Multi-Platform**: Support for Java, Python, Node.js, Docker, Kubernetes
+
+### Advanced Features (Go Only)
+- **🎛️ Interactive Mode**: Guided walkthrough for beginners
+- **📡 Webhook Logging**: Enterprise monitoring and audit trails
+- **🏗️ Project Detection**: Automatic runtime environment identification
+- **⚡ Performance**: Optimized for large-scale operations
+
+## 📚 Documentation
+
+- **[Trust Store Management Guide](./trust-store-management.md)** - Comprehensive usage documentation
+- **[Getting Started Guide](./starthere.md)** - Quick introduction and concepts
+
+### Project-Specific Documentation
+- **[Bash Implementation README](./bash-trust-store-manager/README.md)**
+- **[Go Implementation README](./go-trust-store-manager/README.md)**
+- **[Go Implementation Tutorial](./go-trust-store-manager/TUTORIAL.md)**
+- **[Go Implementation Roadmap](./go-trust-store-manager/ROADMAP.md)**
+
+## 🛠️ Installation
+
+### Bash Scripts
 ```bash
-# Apply the Kubernetes manifests
-kubectl apply -f kubernetes-trust-store.yaml
+cd bash-trust-store-manager
+# Scripts are ready to use - no installation required
+chmod +x *.sh
 ```
 
-## Documentation
-
-For a comprehensive guide on trust store management, including all possible permutations and use cases, see the [Trust Store Management Documentation](trust-store-management.md).
-
-## Requirements
-
-- Bash 4.0+
-- OpenSSL
-- Java keytool (for JKS trust stores)
-- Docker (for Docker mode)
-- kubectl (for Kubernetes mode)
-
-## License
-
-MIT 
-
-# Auto Trust Store Manager
-
-This project provides tools for automatically managing trust stores across different applications and platforms. It ensures that all trust stores in a project are kept in sync with a baseline trust chain.
-
-## Components
-
-- **Auto Trust Store Manager Script** (`auto_trust_store_manager.sh`): The core utility for discovering and updating trust stores
-- **Compare and Update Script** (`compare_and_update.sh`): A wrapper script that uses the core utility to update all trust stores in a project
-
-## Directory Structure
-
-```
-auto-trust-store-manager/
-├── auto_trust_store_manager.sh     # Core utility script
-├── compare_and_update.sh           # Wrapper script
-├── baseline-certs/                 # Directory containing baseline certificates
-│   ├── baseline-trust-chain.pem    # Baseline trust chain (PEM format)
-│   ├── root-ca.crt                 # Root CA certificate
-│   ├── intermediate-ca.crt         # Intermediate CA certificate
-│   └── server.crt                  # Server certificate
-├── project-java/                   # Example Java project
-│   ├── update_java_truststore.sh   # Java-specific example script
-│   └── truststore/
-│       └── project-trust-store.jks # Java trust store (JKS format)
-├── project-nodejs/                 # Example Node.js project
-│   ├── update_nodejs_truststore.sh # Node.js-specific example script
-│   └── truststore/
-│       └── project-trust-chain.pem # Node.js trust store (PEM format)
-└── project-python/                 # Example Python project
-    ├── update_python_truststore.sh # Python-specific example script
-    └── truststore/
-        └── project-trust-chain.pem # Python trust store (PEM format)
-```
-
-## Auto Trust Store Manager Script
-
-The `auto_trust_store_manager.sh` script is the core utility that discovers and updates trust stores in a project directory.
-
-### Features
-
-- Automatically discovers trust stores in various formats (PEM, JKS, etc.)
-- Updates trust stores with certificates from a baseline trust chain
-- Compares trust stores with a baseline to identify differences
-- Handles various runtime environments (Java, Python, Node.js, etc.)
-- Supports downloading baseline trust chain from a URL
-
-### Command-Line Options
-
-```
-Usage: ./auto_trust_store_manager.sh [options]
-
-Options:
-  -d, --directory DIR       Target directory to scan (default: current directory)
-  -b, --baseline FILE       Path to baseline trust chain for comparison/update
-  -c, --certificate FILE    Path to certificate to append (default: auto-generated)
-  -l, --log FILE            Log file path (default: trust_store_scan_YYYYMMDD_HHMMSS.log)
-  -p, --passwords "p1 p2"   Space-separated list of passwords to try for JKS files (in quotes)
-  -k, --kubernetes          Enable Kubernetes mode (scan ConfigMaps and Secrets)
-  -D, --docker              Enable Docker mode (scan common Docker trust store locations)
-  -r, --restart             Restart affected services after modification
-  -n, --no-backup           Disable backup creation before modification
-  -v, --verbose             Enable verbose output
-  -C, --compare-only        Only compare trust stores, don't modify them
-  -u, --baseline-url URL    URL to download baseline trust chain for comparison
-  -h, --help                Display this help message
-```
-
-### Examples
-
+### Go Binary
 ```bash
-# Discover trust stores in a directory
-./auto_trust_store_manager.sh -d /path/to/project -v
-
-# Compare trust stores with a baseline
-./auto_trust_store_manager.sh -b baseline-certs/baseline-trust-chain.pem -d /path/to/project -C -v
-
-# Update trust stores with a baseline
-./auto_trust_store_manager.sh -b baseline-certs/baseline-trust-chain.pem -d /path/to/project -v
-
-# Try multiple passwords for JKS files
-./auto_trust_store_manager.sh -b baseline-certs/baseline-trust-chain.pem -d /path/to/project -p "changeit changeme password" -v
-
-# Download baseline from URL and update trust stores
-./auto_trust_store_manager.sh -u https://example.com/baseline.pem -d /path/to/project -v
+cd go-trust-store-manager
+./install.sh  # Install binary to your PATH
 ```
 
-## Compare and Update Script
+## 📖 Examples
 
-The `compare_and_update.sh` script is a wrapper around the core utility that simplifies the process of comparing and updating trust stores.
-
-### Features
-
-- Compares all trust stores in a project with a baseline trust chain
-- Updates all trust stores to match the baseline
-- Verifies that all trust stores match the baseline after update
-- Handles JKS password issues by trying multiple common passwords
-
-### Command-Line Options
-
-```
-Usage: ./compare_and_update.sh [options]
-
-Options:
-  -b, --baseline FILE       Path to baseline trust chain (default: baseline-certs/baseline-trust-chain.pem)
-  -d, --directory DIR       Target directory to scan (default: current directory)
-  -p, --passwords "p1 p2"   Space-separated list of passwords to try for JKS files (in quotes)
-  -u, --baseline-url URL    URL to download baseline trust chain
-  -v, --verbose             Enable verbose output
-  -h, --help                Display this help message
-```
-
-### Examples
-
+### Dry-Run Mode (Preview Changes)
 ```bash
-# Compare and update all trust stores in the project
-./compare_and_update.sh
+# Bash
+./bash-trust-store-manager/auto_trust_store_manager.sh --noop -d /path/to/project -v
 
-# Compare and update trust stores in a specific directory
-./compare_and_update.sh -d /path/to/project
-
-# Use a different baseline trust chain
-./compare_and_update.sh -b /path/to/baseline.pem
-
-# Try specific passwords for JKS files
-./compare_and_update.sh -p "password1 password2 password3"
-
-# Download baseline from URL and update trust stores
-./compare_and_update.sh -u https://example.com/baseline.pem
+# Go  
+./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --noop --auto -d /path/to/project -v
 ```
 
-## Runtime-Specific Examples
-
-The project includes example scripts for updating trust stores in specific runtime environments:
-
-### Java
-
+### Add Certificate to All Trust Stores
 ```bash
-# Update Java trust stores
-./project-java/update_java_truststore.sh
+# Bash
+./bash-trust-store-manager/auto_trust_store_manager.sh -d /path/to/project -c /path/to/cert.pem
+
+# Go
+./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --auto -d /path/to/project -c /path/to/cert.pem
 ```
 
-### Python
-
+### Interactive Walkthrough (Go Only)
 ```bash
-# Update Python trust stores
-./project-python/update_python_truststore.sh
+./go-trust-store-manager/bin/trust-store-manager-darwin-arm64 --interactive
 ```
 
-### Node.js
+## 🔧 System Requirements
 
-```bash
-# Update Node.js trust stores
-./project-nodejs/update_nodejs_truststore.sh
-```
+### Common Requirements
+- **OpenSSL** - Certificate manipulation
+- **Java keytool** - JKS trust store management (when working with Java keystores)
 
-## Using in CI/CD Pipelines
+### Bash-Specific
+- **Bash 4.0+**
+- Standard Unix utilities (find, grep, etc.)
 
-The scripts can be integrated into CI/CD pipelines to automatically update trust stores when new certificates are added to the baseline. This ensures that all applications in the project have the latest trusted certificates.
+### Go-Specific  
+- No additional dependencies (statically compiled binaries)
 
-```bash
-# Example CI/CD pipeline command
-./compare_and_update.sh -b /path/to/baseline.pem -v
-``` 
+## 🌍 Environment Support
+
+| Environment | Bash Scripts | Go Binary | Notes |
+|-------------|--------------|-----------|-------|
+| **Local Development** | ✅ | ✅ | Full feature support |
+| **CI/CD Pipelines** | ✅ | ✅ | Automated operations |
+| **Docker Containers** | ✅ | ✅ | Container-aware scanning |
+| **Kubernetes Clusters** | ✅ | ✅ | ConfigMap and Secret support |
+| **Cloud Platforms** | ✅ | ✅ | AWS, Azure, GCP compatible |
+| **Legacy Systems** | ✅ | ⚠️ | Bash preferred for older systems |
+| **Windows** | ⚠️ | ✅ | Go binary recommended |
+
+## 🤝 Choosing Between Implementations
+
+### Use **Bash Scripts** When:
+- Working with legacy or restricted environments
+- Need maximum compatibility across Unix-like systems
+- Prefer simple, readable scripts that can be easily customized
+- System administrators familiar with shell scripting
+- Minimal dependencies required
+
+### Use **Go Binary** When:
+- Need enterprise features (webhooks, interactive mode)
+- Working in modern development environments
+- Require cross-platform compatibility (including Windows)
+- Performance is important for large-scale operations
+- Want a single, self-contained executable
+
+## 🔐 Security Considerations
+
+- Always validate certificate sources and URLs
+- Use `--noop` mode to preview changes before execution
+- Create backups before modifying production trust stores  
+- Implement proper access controls for trust store management
+- Monitor all trust store modifications via logging/webhooks
+
+## 📝 License
+
+MIT License - See individual project directories for specific details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Choose the appropriate implementation (bash or go)
+2. Follow the project-specific contribution guidelines
+3. Test changes in both discovery and modification modes
+4. Update relevant documentation
+
+## 📞 Support
+
+- **Issues**: Open GitHub issues for bugs or feature requests
+- **Documentation**: Refer to project-specific README files
+- **Examples**: Check the `examples/` directories in each project 

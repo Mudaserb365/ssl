@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSL Certificate Chain Viewer</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #000;
+            color: #0f0;
+            padding: 20px;
+            margin: 0;
+            line-height: 1.5;
+        }
+        .terminal {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #000;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            overflow-x: auto;
+        }
+        h1 {
+            color: #0f0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #0f0;
+            border-bottom: 1px solid #0f0;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .prompt {
+            color: #0f0;
+        }
+        .command {
+            color: #ff0;
+        }
+        .output {
+            color: #0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <h1>SSL Certificate Chain Viewer</h1>
+        
+        <div class="prompt">$ </div>
+        <span class="command">openssl x509 -in server.crt -text -noout</span>
+        <pre id="server-cert" class="output">Loading certificate information...</pre>
+        
+        <div class="prompt">$ </div>
+        <span class="command">openssl x509 -in intermediate-ca.crt -text -noout</span>
+        <pre id="intermediate-ca" class="output">Loading certificate information...</pre>
+        
+        <div class="prompt">$ </div>
+        <span class="command">openssl x509 -in root-ca.crt -text -noout</span>
+        <pre id="root-ca" class="output">Loading certificate information...</pre>
+        
+        <div class="prompt">$ </div>
+        <span class="command">openssl s_client -connect localhost:443 | grep "Protocol :"</span>
+        <pre id="protocol-version" class="output">Loading protocol information...</pre>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html> 
