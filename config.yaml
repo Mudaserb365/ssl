@@ -1,0 +1,123 @@
+# Trust Store Manager Configuration
+# This configuration file is used by both Go and Bash implementations
+
+# Baseline Trust Store Configuration
+baseline:
+  # URL to download reference trust store (prefer PEM format)
+  url: "https://company.com/pki/baseline-trust-store.pem"
+  # Local fallback path if URL is unavailable
+  fallback_path: "./baseline-certs/baseline-trust-chain.pem"
+  # Verification settings
+  verify_ssl: true
+  timeout_seconds: 30
+
+# Logging Configuration
+logging:
+  # Central webhook endpoint for structured logs
+  webhook_url: "https://logs.company.com/api/trust-store-audit"
+  # API key for webhook authentication (optional)
+  webhook_api_key: "${TRUST_STORE_WEBHOOK_KEY}"
+  # Local log file settings
+  local_log_enabled: true
+  local_log_path: "./logs/trust-store-manager-${TIMESTAMP}.log"
+  # Log level: DEBUG, INFO, WARN, ERROR
+  log_level: "INFO"
+  # Enable dual output (terminal + file)
+  dual_output: true
+
+# Security Configuration
+security:
+  # Require --noop flag for safety (prevents accidental execution)
+  require_noop: true
+  # Enable backup creation before modifications
+  enable_backups: true
+  # Backup directory
+  backup_dir: "./backups"
+  # Maximum backup retention days
+  backup_retention_days: 30
+
+# Operation Configuration
+operations:
+  # Only perform upserts (no deletions)
+  upsert_only: true
+  # Default passwords to try for JKS files
+  default_jks_passwords:
+    - "changeit"
+    - "changeme"
+    - "password"
+    - "keystore"
+    - "truststore"
+    - "secret"
+    - ""
+  # Timeout for individual operations (seconds)
+  operation_timeout: 300
+  # Enable parallel processing
+  parallel_processing: true
+  # Maximum concurrent operations
+  max_concurrent: 5
+
+# Discovery Configuration
+discovery:
+  # File patterns to scan for trust stores
+  trust_store_patterns:
+    - "*.jks"
+    - "*.keystore"
+    - "*.truststore"
+    - "*.p12"
+    - "*.pfx"
+    - "*trust*.pem"
+    - "*cert*.pem"
+    - "ca-bundle.crt"
+    - "cacerts"
+  # Directories to exclude from scanning
+  exclude_directories:
+    - ".git"
+    - "node_modules"
+    - ".mvn"
+    - "target"
+    - "build"
+    - ".gradle"
+    - "__pycache__"
+    - ".venv"
+    - "venv"
+  # Maximum scan depth
+  max_scan_depth: 10
+
+# Environment Detection
+environment:
+  # Enable automatic project type detection
+  auto_detect: true
+  # Project type priorities for detection
+  detection_order:
+    - "java"
+    - "python"
+    - "nodejs"
+    - "go"
+    - "dotnet"
+    - "generic"
+
+# Webhook Payload Structure Configuration
+webhook_payload:
+  # Include system information
+  include_system_info: true
+  # Include git information
+  include_git_info: true
+  # Include detailed modification logs
+  include_modification_logs: true
+  # Include before/after diffs
+  include_diffs: true
+  # Compress payload if larger than threshold (bytes)
+  compression_threshold: 10240
+
+# Git Integration
+git:
+  # Enable git information collection
+  enabled: true
+  # Include branch information
+  include_branch: true
+  # Include commit hash
+  include_commit: true
+  # Include repository URL
+  include_repo_url: true
+  # Include uncommitted changes info
+  include_dirty_state: true 

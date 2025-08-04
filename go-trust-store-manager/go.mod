@@ -1,3 +1,5 @@
-module github.com/user/trust-store-manager
+module trust-store-manager
 
-go 1.21
+go 1.20
+
+require gopkg.in/yaml.v2 v2.4.0
