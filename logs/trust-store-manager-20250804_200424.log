@@ -1,0 +1,73 @@
+Trust Store Manager Log - Mon Aug  4 20:04:24 AEST 2025
+Session ID: ts-1754301864340032000
+Command: ./bash-trust-store-manager/trust-store-manager-enterprise.sh 
+----------------------------------------
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "Trust Store Manager started"
+}
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "Running in NOOP mode - no changes will be made"
+}
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "Starting trust store scan in directory: /tmp"
+}
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "NOOP mode: Showing what would be done without making changes"
+}
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "No trust stores found in: /tmp"
+}
+[AUDIT_LOG] {
+  "machine_ip": "10.0.0.94",
+  "machine_id": "Muhammeds-Mac-Studio.local_10.0.0.94",
+  "user": {
+    "username": "mudaser",
+    "user_id": "501",
+    "home_dir": "/Users/mudaser"
+  },
+  "git_project": {
+    "project_name": "ssl",
+    "branch_name": "feature/testing-and-jre-support",
+    "commit_hash": "9bdc6a7650b72bfcfe4a12223813abe5db616385",
+    "repository_url": "https://github.com/Mudaserb365/ssl.git",
+    "is_dirty": true,
+    "working_dir": "/Users/mudaser/Software /experiment"
+  },
+  "modifications": [],
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "command": "./bash-trust-store-manager/trust-store-manager-enterprise.sh ",
+  "system_info": {
+    "hostname": "Muhammeds-Mac-Studio.local",
+    "os": "Darwin",
+    "arch": "arm64",
+    "ip_addresses": [10.0.0.94]
+  },
+  "duration": "0ss",
+  "summary": {
+    "total_modifications": 0,
+    "successful_modifications": 0,
+    "failed_modifications": 0
+  }
+}
+[INFO] {
+  "timestamp": "2025-08-04T10:04:24Z",
+  "session_id": "ts-1754301864340032000",
+  "level": "INFO",
+  "message": "Trust Store Manager completed successfully"
+}

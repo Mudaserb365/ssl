@@ -1,0 +1,398 @@
+name: Trust Store Manager CI/CD
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+
+jobs:
+  # Test job for different platforms and configurations
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.20', '1.21']
+        include:
+          - os: ubuntu-latest
+            jre: openjdk-11-jdk
+          - os: macos-latest
+            jre: openjdk@11
+          - os: windows-latest
+            jre: openjdk11
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Install Java/OpenJDK (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.jre }} openssl
+
+    - name: Install Java/OpenJDK (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install ${{ matrix.jre }} openssl
+
+    - name: Install Java/OpenJDK (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install ${{ matrix.jre }} openssl
+      shell: cmd
+
+    - name: Verify Prerequisites
+      run: |
+        go version
+        java -version
+        keytool -help || true
+        openssl version
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('go-trust-store-manager/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+    - name: Download Go dependencies
+      working-directory: go-trust-store-manager
+      run: go mod download
+
+    - name: Verify Go modules
+      working-directory: go-trust-store-manager
+      run: go mod verify
+
+    - name: Create test fixtures
+      run: |
+        chmod +x tests/fixtures/create_test_keystores.sh
+        ./tests/fixtures/create_test_keystores.sh
+      shell: bash
+
+    - name: Run Bash unit tests
+      run: |
+        chmod +x tests/unit/test_trust_store_operations.sh
+        ./tests/unit/test_trust_store_operations.sh
+      shell: bash
+
+    - name: Run Go unit tests
+      working-directory: tests/unit
+      run: go test -v -race -coverprofile=coverage.out
+
+    - name: Run Go integration tests
+      working-directory: go-trust-store-manager
+      run: go test -v -race -tags=integration ./...
+
+    - name: Run Go benchmarks
+      working-directory: tests/unit
+      run: go test -bench=. -benchmem
+
+    - name: Check Go code quality
+      working-directory: go-trust-store-manager
+      run: |
+        go vet ./...
+        go fmt ./...
+        git diff --exit-code
+
+    - name: Test Bash script with shellcheck
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get install -y shellcheck
+        shellcheck bash-trust-store-manager/*.sh || true
+
+    - name: Test command equivalence
+      run: |
+        # Test that both implementations support the same flags
+        ./bash-trust-store-manager/trust-store-manager-enterprise.sh --help | grep -E "(--noop|--dry-run)"
+        cd go-trust-store-manager && go run . --help | grep -E "(--noop|--dry-run)"
+      shell: bash
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.21'
+      uses: codecov/codecov-action@v3
+      with:
+        file: tests/unit/coverage.out
+        flags: unittests
+        name: codecov-umbrella
+
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: './go-trust-store-manager/...'
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Build job for creating binaries
+  build:
+    name: Build Binaries
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+
+    - name: Build Go binaries for multiple platforms
+      working-directory: go-trust-store-manager
+      run: |
+        # Create build directory
+        mkdir -p build
+        
+        # Build for different platforms
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/trust-store-manager-linux-amd64 .
+        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/trust-store-manager-linux-arm64 .
+        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o build/trust-store-manager-darwin-amd64 .
+        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o build/trust-store-manager-darwin-arm64 .
+        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o build/trust-store-manager-windows-amd64.exe .
+        
+        # Create checksums
+        cd build
+        sha256sum trust-store-manager-* > checksums.txt
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: trust-store-manager-binaries
+        path: go-trust-store-manager/build/
+
+    - name: Package bash scripts
+      run: |
+        mkdir -p dist
+        tar -czf dist/bash-trust-store-manager.tar.gz bash-trust-store-manager/
+        cd dist
+        sha256sum bash-trust-store-manager.tar.gz > bash-checksums.txt
+
+    - name: Upload bash artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: bash-trust-store-manager
+        path: dist/
+
+  # Docker build and push
+  docker:
+    name: Docker Build and Push
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/trust-store-manager
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        platforms: linux/amd64,linux/arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Release job
+  release:
+    name: Create Release
+    needs: [test, build, security]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: trust-store-manager-binaries
+        path: binaries/
+
+    - name: Download bash artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: bash-trust-store-manager
+        path: bash-dist/
+
+    - name: Create release archives
+      run: |
+        # Create release directory
+        mkdir -p release
+        
+        # Copy binaries
+        cp -r binaries/* release/
+        cp -r bash-dist/* release/
+        
+        # Create combined archive
+        tar -czf release/trust-store-manager-${{ github.event.release.tag_name }}.tar.gz \
+          --exclude='*.tar.gz' --exclude='*.txt' \
+          go-trust-store-manager/ bash-trust-store-manager/ config.yaml README.md
+
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release/trust-store-manager-*
+          release/*.txt
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Dependency monitoring
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+        allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+  # Performance regression testing
+  performance:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install Java and OpenSSL
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openjdk-11-jdk openssl
+
+    - name: Create test fixtures
+      run: |
+        chmod +x tests/fixtures/create_test_keystores.sh
+        ./tests/fixtures/create_test_keystores.sh
+
+    - name: Run performance benchmarks
+      working-directory: tests/unit
+      run: |
+        go test -bench=. -benchmem -count=5 -timeout=10m > benchmark_results.txt
+        cat benchmark_results.txt
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: tests/unit/benchmark_results.txt
+
+  # Documentation generation
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Generate Go documentation
+      working-directory: go-trust-store-manager
+      run: |
+        go doc -all . > ../docs/go-api-reference.md
+
+    - name: Generate test coverage report
+      working-directory: go-trust-store-manager
+      run: |
+        go test -coverprofile=coverage.out ./...
+        go tool cover -html=coverage.out -o ../docs/coverage.html
+
+    - name: Deploy documentation to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+        cname: trust-store-manager.dev 
