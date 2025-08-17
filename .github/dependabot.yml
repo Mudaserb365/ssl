@@ -1,0 +1,66 @@
+version: 2
+updates:
+  # Go module dependencies
+  - package-ecosystem: "gomod"
+    directory: "/go-trust-store-manager"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Mudaserb365"
+    assignees:
+      - "Mudaserb365"
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "go:"
+      include: "scope"
+    versioning-strategy: "auto"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "gopkg.in/yaml.v2"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Mudaserb365"
+    assignees:
+      - "Mudaserb365"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci:"
+      include: "scope"
+
+  # Docker dependencies (if Dockerfile exists)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Mudaserb365"
+    assignees:
+      - "Mudaserb365"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker:"
+      include: "scope" 

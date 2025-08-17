@@ -13,8 +13,10 @@ baseline:
 
 # Logging Configuration
 logging:
-  # Central webhook endpoint for structured logs
-  webhook_url: "https://logs.company.com/api/trust-store-audit"
+  # Enable enterprise logging features (set to false for basic usage)
+  enabled: true
+  # Central webhook endpoint for structured logs (enterprise feature)
+  webhook_url: ""  # Leave empty to disable webhook logging
   # API key for webhook authentication (optional)
   webhook_api_key: "${TRUST_STORE_WEBHOOK_KEY}"
   # Local log file settings
@@ -24,6 +26,8 @@ logging:
   log_level: "INFO"
   # Enable dual output (terminal + file)
   dual_output: true
+  # Simple mode (disable JSON structured logging for basic users)
+  simple_mode: false
 
 # Security Configuration
 security:
@@ -120,4 +124,17 @@ git:
   # Include repository URL
   include_repo_url: true
   # Include uncommitted changes info
-  include_dirty_state: true 
+  include_dirty_state: true
+
+# Java Runtime Environment (JRE) Configuration
+jre:
+  # Auto-detect JRE installation
+  auto_detect: true
+  # Custom JRE/JDK path (leave empty for auto-detection)
+  java_home: ""
+  # Custom keytool path (leave empty for auto-detection)
+  keytool_path: ""
+  # Minimum required Java version
+  min_version: "8"
+  # Display JRE information in noop mode
+  display_info_in_noop: true 

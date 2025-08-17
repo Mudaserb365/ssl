@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -30,12 +31,14 @@ type AppConfig struct {
 	} `yaml:"baseline"`
 
 	Logging struct {
+		Enabled          bool   `yaml:"enabled"`
 		WebhookURL       string `yaml:"webhook_url"`
 		WebhookAPIKey    string `yaml:"webhook_api_key"`
 		LocalLogEnabled  bool   `yaml:"local_log_enabled"`
 		LocalLogPath     string `yaml:"local_log_path"`
 		LogLevel         string `yaml:"log_level"`
 		DualOutput       bool   `yaml:"dual_output"`
+		SimpleMode       bool   `yaml:"simple_mode"`
 	} `yaml:"logging"`
 
 	Security struct {
@@ -52,6 +55,14 @@ type AppConfig struct {
 		ParallelProcessing bool     `yaml:"parallel_processing"`
 		MaxConcurrent      int      `yaml:"max_concurrent"`
 	} `yaml:"operations"`
+
+	JRE struct {
+		AutoDetect        bool   `yaml:"auto_detect"`
+		JavaHome          string `yaml:"java_home"`
+		KeytoolPath       string `yaml:"keytool_path"`
+		MinVersion        string `yaml:"min_version"`
+		DisplayInfoInNoop bool   `yaml:"display_info_in_noop"`
+	} `yaml:"jre"`
 }
 
 // Logging structures
@@ -178,7 +189,7 @@ func validateAndSetDefaults(config *AppConfig) {
 		config.Baseline.URL = "https://company.com/pki/baseline-trust-store.pem"
 	}
 	if config.Logging.WebhookURL == "" {
-		config.Logging.WebhookURL = "https://logs.company.com/api/trust-store-audit"
+		config.Logging.WebhookURL = ""  // Empty by default to disable webhook
 	}
 	if config.Logging.LocalLogPath == "" {
 		timestamp := time.Now().Format("20060102_150405")
@@ -186,7 +197,14 @@ func validateAndSetDefaults(config *AppConfig) {
 	}
 	config.Security.RequireNoop = true
 	config.Operations.UpsertOnly = true
+	config.Logging.Enabled = true
 	config.Logging.DualOutput = true
+	config.Logging.SimpleMode = false
+	
+	// JRE defaults
+	config.JRE.AutoDetect = true
+	config.JRE.MinVersion = "8"
+	config.JRE.DisplayInfoInNoop = true
 }
 
 // NewStructuredLogger creates a new structured logger
@@ -464,6 +482,123 @@ func isGitDirty() bool {
 	return err != nil
 }
 
+// JRE Detection and Information Functions
+type JREInfo struct {
+	JavaHome    string `json:"java_home"`
+	JavaVersion string `json:"java_version"`
+	KeytoolPath string `json:"keytool_path"`
+	Available   bool   `json:"available"`
+}
+
+func detectJRE(config *AppConfig) *JREInfo {
+	jreInfo := &JREInfo{}
+	
+	// Check for custom paths first
+	if config.JRE.JavaHome != "" {
+		jreInfo.JavaHome = config.JRE.JavaHome
+		jreInfo.KeytoolPath = filepath.Join(config.JRE.JavaHome, "bin", "keytool")
+	} else if config.JRE.KeytoolPath != "" {
+		jreInfo.KeytoolPath = config.JRE.KeytoolPath
+	}
+	
+	// Auto-detect if enabled
+	if config.JRE.AutoDetect {
+		// Try to find java command
+		if javaPath, err := exec.LookPath("java"); err == nil {
+			jreInfo.JavaHome = filepath.Dir(filepath.Dir(javaPath))
+		}
+		
+		// Try to find keytool command
+		if keytoolPath, err := exec.LookPath("keytool"); err == nil {
+			jreInfo.KeytoolPath = keytoolPath
+			jreInfo.Available = true
+		}
+		
+		// Get Java version
+		if cmd := exec.Command("java", "-version"); cmd != nil {
+			if output, err := cmd.CombinedOutput(); err == nil {
+				jreInfo.JavaVersion = strings.Split(string(output), "\n")[0]
+			}
+		}
+	}
+	
+	// Validate keytool availability
+	if jreInfo.KeytoolPath != "" {
+		if cmd := exec.Command(jreInfo.KeytoolPath, "-help"); cmd != nil {
+			if err := cmd.Run(); err == nil {
+				jreInfo.Available = true
+			}
+		}
+	}
+	
+	return jreInfo
+}
+
+func displayJREInfo(jreInfo *JREInfo, config *AppConfig) {
+	if !config.JRE.DisplayInfoInNoop {
+		return
+	}
+	
+	fmt.Println("\n=== Java Runtime Environment Information ===")
+	
+	if jreInfo.Available {
+		fmt.Printf("✓ JRE Status: Available\n")
+		if jreInfo.JavaVersion != "" {
+			fmt.Printf("  Java Version: %s\n", strings.TrimSpace(jreInfo.JavaVersion))
+		}
+		if jreInfo.JavaHome != "" {
+			fmt.Printf("  Java Home: %s\n", jreInfo.JavaHome)
+		}
+		if jreInfo.KeytoolPath != "" {
+			fmt.Printf("  Keytool Path: %s\n", jreInfo.KeytoolPath)
+		}
+		fmt.Printf("  JKS Support: Enabled\n")
+		fmt.Printf("  PKCS12 Support: Enabled\n")
+	} else {
+		fmt.Printf("⚠ JRE Status: Not Available\n")
+		fmt.Printf("  JKS Support: Limited (keytool not found)\n")
+		fmt.Printf("  PKCS12 Support: Limited (keytool not found)\n")
+		fmt.Printf("\n")
+		fmt.Printf("To enable full JKS/PKCS12 support:\n")
+		fmt.Printf("  1. Install Java JDK/JRE: https://adoptium.net/\n")
+		fmt.Printf("  2. Ensure 'java' and 'keytool' are in your PATH\n")
+		fmt.Printf("  3. Or configure custom paths in config.yaml:\n")
+		fmt.Printf("     jre:\n")
+		fmt.Printf("       java_home: \"/path/to/java\"\n")
+		fmt.Printf("       keytool_path: \"/path/to/keytool\"\n")
+	}
+	
+	fmt.Println("===========================================\n")
+}
+
+func promptForJRELocation() string {
+	fmt.Println("\n=== JRE Configuration Required ===")
+	fmt.Println("Java Runtime Environment (JRE) not found in standard locations.")
+	fmt.Println("Please provide the path to your Java installation:")
+	fmt.Println()
+	fmt.Print("Enter JAVA_HOME path (or press Enter to continue without JRE): ")
+	
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		javaHome := strings.TrimSpace(scanner.Text())
+		if javaHome != "" {
+			// Validate the provided path
+			keytoolPath := filepath.Join(javaHome, "bin", "keytool")
+			if cmd := exec.Command(keytoolPath, "-help"); cmd != nil {
+				if err := cmd.Run(); err == nil {
+					fmt.Printf("✓ JRE found at: %s\n", javaHome)
+					fmt.Println("You can save this path in config.yaml for future use.")
+					return javaHome
+				}
+			}
+			fmt.Printf("⚠ Invalid Java installation at: %s\n", javaHome)
+		}
+	}
+	
+	fmt.Println("Continuing without JRE support (PEM files only)...")
+	return ""
+}
+
 func printUsage() {
 	fmt.Println("Trust Store Manager - Enterprise Edition (Go)")
 	fmt.Println("Automated SSL/TLS trust store management with centralized logging")
@@ -509,18 +644,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize structured logging
-	structuredLogger, err := NewStructuredLogger(appConfig)
-	if err != nil {
-		fmt.Printf("Error initializing logger: %v\n", err)
-		os.Exit(1)
+	// Initialize structured logging only if enabled
+	var structuredLogger *StructuredLogger
+	if appConfig.Logging.Enabled {
+		structuredLogger, err = NewStructuredLogger(appConfig)
+		if err != nil {
+			fmt.Printf("Error initializing logger: %v\n", err)
+			os.Exit(1)
+		}
+		defer structuredLogger.Finalize()
+		
+		// Log startup
+		structuredLogger.LogMessage("INFO", "Trust Store Manager started")
+		if noopMode {
+			structuredLogger.LogMessage("INFO", "Running in NOOP mode - no changes will be made")
+		}
 	}
-	defer structuredLogger.Finalize()
 
-	// Log startup
-	structuredLogger.LogMessage("INFO", "Trust Store Manager started")
+	// Detect JRE and display information if in noop mode
+	jreInfo := detectJRE(appConfig)
+	
 	if noopMode {
-		structuredLogger.LogMessage("INFO", "Running in NOOP mode - no changes will be made")
+		displayJREInfo(jreInfo, appConfig)
+		
+		// If JRE not available and not in interactive mode, prompt user
+		if !jreInfo.Available && autoMode {
+			if javaHome := promptForJRELocation(); javaHome != "" {
+				// Update configuration with user-provided path
+				appConfig.JRE.JavaHome = javaHome
+				jreInfo = detectJRE(appConfig)
+			}
+		}
 	}
 
 	// Simulate trust store processing
@@ -528,19 +682,35 @@ func main() {
 	
 	if noopMode {
 		fmt.Println("NOOP mode: Showing what would be done without making changes")
-		structuredLogger.LogMessage("NOOP", "Would scan for trust stores")
 		
-		// Example modification logging
-		modification := TrustStoreModification{
-			FilePath:   targetDirectory + "/example.jks",
-			FileType:   "JKS",
-			Operation:  "upsert_certificate",
-			Status:     "noop",
-			NoopOutput: "Would add certificate to trust store",
+		if structuredLogger != nil {
+			structuredLogger.LogMessage("NOOP", "Would scan for trust stores")
+			
+			// Example modification logging
+			modification := TrustStoreModification{
+				FilePath:   targetDirectory + "/example.jks",
+				FileType:   "JKS",
+				Operation:  "upsert_certificate",
+				Status:     "noop",
+				NoopOutput: "Would add certificate to trust store",
+			}
+			structuredLogger.LogModification(modification)
 		}
-		structuredLogger.LogModification(modification)
+		
+		// Display trust store type support based on JRE availability
+		fmt.Println("\nSupported Trust Store Types:")
+		fmt.Printf("  ✓ PEM (.pem, .crt) - Always supported\n")
+		if jreInfo.Available {
+			fmt.Printf("  ✓ JKS (.jks, .keystore) - Supported (keytool available)\n")
+			fmt.Printf("  ✓ PKCS12 (.p12, .pfx) - Supported (keytool available)\n")
+		} else {
+			fmt.Printf("  ⚠ JKS (.jks, .keystore) - Limited support (keytool not found)\n")
+			fmt.Printf("  ⚠ PKCS12 (.p12, .pfx) - Limited support (keytool not found)\n")
+		}
 	}
 
-	structuredLogger.LogMessage("INFO", "Trust Store Manager completed successfully")
+	if structuredLogger != nil {
+		structuredLogger.LogMessage("INFO", "Trust Store Manager completed successfully")
+	}
 	fmt.Println("Operation completed successfully!")
 } 
