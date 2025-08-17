@@ -1,0 +1,52 @@
+# Documentation
+README.md
+*.md
+
+# Git
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# SSL certificates (if any - should be mounted as volumes)
+ssl/
+certificates/
+*.pem
+*.crt
+*.key
+*.pfx
+*.p12
+
+# Backup files
+*.bak
+*.backup
+
+# Node modules (if using Node.js build tools)
+node_modules/
+npm-debug.log
+
+# Environment files
+.env
+.env.local 

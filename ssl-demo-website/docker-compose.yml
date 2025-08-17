@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  ssl-inspector:
+    build: .
+    container_name: ssl-certificate-inspector
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    volumes:
+      # Mount SSL certificates
+      - ./ssl:/etc/nginx/ssl:ro
+      # Mount logs for debugging
+      - nginx-logs:/var/log/nginx
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ssl-inspector.rule=Host(`ssl-inspector.localhost`)"
+      - "traefik.http.routers.ssl-inspector.entrypoints=web"
+      - "traefik.http.services.ssl-inspector.loadbalancer.server.port=80"
+
+  # Optional: Add a reverse proxy for SSL termination
+  # Uncomment this if you want to test with actual SSL certificates
+  #
+  # reverse-proxy:
+  #   image: traefik:v2.10
+  #   container_name: ssl-inspector-proxy
+  #   command:
+  #     - "--api.insecure=true"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+  #     - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+  #     - "--certificatesresolvers.myresolver.acme.email=admin@example.com"
+  #     - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #     - "8080:8080"  # Traefik dashboard
+  #   volumes:
+  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #     - "letsencrypt:/letsencrypt"
+  #   depends_on:
+  #     - ssl-inspector
+
+volumes:
+  nginx-logs:
+    driver: local
+  # letsencrypt:
+  #   driver: local
+
+networks:
+  default:
+    name: ssl-inspector-network 

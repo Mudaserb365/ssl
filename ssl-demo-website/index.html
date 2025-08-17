@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSL Certificate Inspector</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .cert-property {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .trust-chain-item {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .algorithm-badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .fingerprint {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            background: #f1f3f4;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .validity-date {
+            font-weight: bold;
+        }
+        .expired {
+            color: #dc3545;
+        }
+        .expiring-soon {
+            color: #fd7e14;
+        }
+        .valid {
+            color: #28a745;
+        }
+        #certAnalysis {
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-shield-alt"></i> SSL Certificate Inspector
+            </span>
+            <span class="navbar-text">
+                Real-time certificate analysis
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-certificate"></i>
+                            Current Website SSL Certificate Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <button id="analyzeCert" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-search"></i> Analyze Certificate
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="loading-spinner">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="ms-2">Analyzing SSL certificate...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="certAnalysis">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                                <p>Click "Analyze Certificate" to inspect the SSL certificate for this website.</p>
+                                <p class="small">This tool performs a client-side analysis of the current website's SSL certificate, displaying detailed information about the certificate properties, trust chain, and cryptographic algorithms.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            About This Tool
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-shield-alt text-primary"></i> Security Analysis</h6>
+                                <p class="small">Inspects certificate validity, expiration dates, and trust chain verification.</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-key text-success"></i> Cryptographic Details</h6>
+                                <p class="small">Displays encryption algorithms, key sizes, and signature methods.</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-cloud text-info"></i> Cloud-Ready</h6>
+                                <p class="small">Works behind load balancers and in containerized environments.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-light text-center py-3 mt-5">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 SSL Certificate Inspector | 
+                <span id="currentTime"></span> | 
+                <span id="currentDomain"></span>
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="cert-analyzer.js"></script>
+    <script>
+        // Update current time and domain
+        function updateFooterInfo() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString();
+            document.getElementById('currentDomain').textContent = window.location.hostname;
+        }
+        
+        updateFooterInfo();
+        setInterval(updateFooterInfo, 1000);
+    </script>
+</body>
+</html> 
